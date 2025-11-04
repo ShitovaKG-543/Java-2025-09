@@ -1,6 +1,7 @@
 rootProject.name = "Java-2025-09"
 include("hw01-gradle")
 include("hw02-generics")
+include("hw03-test-framework")
 
 pluginManagement {
     val jgitver: String by settings

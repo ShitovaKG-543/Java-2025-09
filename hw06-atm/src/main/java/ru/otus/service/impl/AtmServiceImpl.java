@@ -3,8 +3,8 @@ package ru.otus.service.impl;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import ru.otus.exception.AtmError;
-import ru.otus.exception.AtmException;
+import ru.otus.exception.ImpossibleIssuedAtmException;
+import ru.otus.exception.InsufficientFundsAtmException;
 import ru.otus.model.Atm;
 import ru.otus.model.Banknote;
 import ru.otus.service.AtmService;
@@ -44,7 +44,7 @@ public class AtmServiceImpl implements AtmService {
         try {
             atm.addBanknotes(banknotes);
             log.info("Банкноты успешно добавлены в ячейки");
-        } catch (AtmException e) {
+        } catch (RuntimeException e) {
             log.error("Возникла ошибка во время пополнения: ", e);
         }
     }
@@ -62,14 +62,15 @@ public class AtmServiceImpl implements AtmService {
         }
 
         if (amount > atm.getTotalBalance()) {
-            log.error(String.format(AtmError.INSUFFICIENT_FUNDS_ERROR.getMessege(), amount, atm.getTotalBalance()));
-            throw new AtmException(AtmError.INSUFFICIENT_FUNDS_ERROR, amount, atm.getTotalBalance());
+            RuntimeException exception = new InsufficientFundsAtmException(amount, atm.getTotalBalance());
+            log.error(exception.getMessage());
+            throw exception;
         }
         try {
             Map<Banknote, Integer> result = atm.getAmount(amount);
             logWithdrawAmount(result);
             return result;
-        } catch (AtmException e) {
+        } catch (ImpossibleIssuedAtmException e) {
             // Сообщим клиенту о невозможности выполнения операции
             System.out.println(e.getMessage());
             return null;

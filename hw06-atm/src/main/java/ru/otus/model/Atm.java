@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import ru.otus.exception.AtmError;
-import ru.otus.exception.AtmException;
+import ru.otus.exception.ImpossibleIssuedAtmException;
+import ru.otus.exception.UnacceptableBanknoteAtmException;
 
 @Slf4j
 public class Atm {
@@ -82,8 +82,7 @@ public class Atm {
             }
         }
         if (!errorNominals.isEmpty()) {
-            throw new AtmException(
-                    AtmError.UNACCEPTABLE_BANKNOTE_ERROR,
+            throw new UnacceptableBanknoteAtmException(
                     errorNominals.stream().map(String::valueOf).collect(Collectors.joining(", ")));
         }
     }
@@ -121,8 +120,9 @@ public class Atm {
 
         // Если не удалось набрать точную сумму
         if (remainingAmount > 0) {
-            log.error(String.format(AtmError.IMPOSSIBLE_ISSUED_ERROR.getMessege(), remainingAmount));
-            throw new AtmException(AtmError.IMPOSSIBLE_ISSUED_ERROR, remainingAmount);
+            RuntimeException exception = new ImpossibleIssuedAtmException(remainingAmount);
+            log.error(exception.getMessage());
+            throw exception;
         }
 
         // Фактическое изъятие банкнот из ячеек

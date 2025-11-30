@@ -2,7 +2,7 @@ package ru.otus.processor.homework;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.otus.model.Message;
 import ru.otus.model.ObjectForMessage;
+import ru.otus.processor.homework.exception.EvenSecondException;
 import ru.otus.processor.homework.memento.DateTimeProvider;
 import ru.otus.processor.homework.memento.Originator;
 import ru.otus.processor.homework.memento.State;
@@ -81,7 +82,6 @@ class ProcessorEvenSecondExceptionTest {
         LocalDateTime oddSecondTime = LocalDateTime.of(2024, 1, 1, 12, 30, 31); // 31 секунда - нечетная
 
         when(dateTimeProvider.getDate()).thenReturn(oddSecondTime);
-        when(originator.restoreState()).thenReturn(new State(testMessage));
         Message result1 = processor.process(testMessage);
         assertNotNull(result1);
         assertEquals(testMessage, result1);
@@ -89,14 +89,11 @@ class ProcessorEvenSecondExceptionTest {
         LocalDateTime evenSecondTime = LocalDateTime.of(2024, 1, 1, 12, 30, 30); // 30 секунд - четная
 
         when(dateTimeProvider.getDate()).thenReturn(evenSecondTime);
+        EvenSecondException exception = assertThrows(EvenSecondException.class, () -> processor.process(testMessage));
 
-        Message result2 = processor.process(testMessage2);
-
-        assertNotNull(result2);
-        assertEquals(testMessage, result2);
+        assertEquals("Обработка в четную секунду: 01.01.2024 12:30:30", exception.getMessage());
         verify(originator, times(1)).saveState(any(State.class));
         verify(dateTimeProvider, times(2)).getDate();
-        verify(originator, times(1)).restoreState();
     }
 
     @Test
@@ -106,12 +103,11 @@ class ProcessorEvenSecondExceptionTest {
         LocalDateTime evenSecondTime = LocalDateTime.of(2024, 1, 1, 12, 30, 30);
 
         when(dateTimeProvider.getDate()).thenReturn(evenSecondTime);
-        when(originator.restoreState()).thenReturn(null);
 
-        Message result = processor.process(testMessage);
+        EvenSecondException exception = assertThrows(EvenSecondException.class, () -> processor.process(testMessage));
 
-        assertNull(result);
+        assertEquals("Обработка в четную секунду: 01.01.2024 12:30:30", exception.getMessage());
+
         verify(originator, never()).saveState(any(State.class));
-        verify(originator).restoreState();
     }
 }

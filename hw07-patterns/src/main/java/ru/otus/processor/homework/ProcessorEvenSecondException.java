@@ -1,7 +1,6 @@
 package ru.otus.processor.homework;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import lombok.extern.slf4j.Slf4j;
 import ru.otus.model.Message;
 import ru.otus.processor.Processor;
@@ -13,8 +12,6 @@ import ru.otus.processor.homework.utils.DateTimeConverter;
 
 @Slf4j
 public class ProcessorEvenSecondException implements Processor {
-
-    private static DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private final Originator originator;
     private final DateTimeProvider dateTimeProvider;
@@ -34,21 +31,16 @@ public class ProcessorEvenSecondException implements Processor {
     public Message process(Message message) {
 
         State state = new State(message);
-        try {
-            LocalDateTime currentDateTime = dateTimeProvider.getDate();
-            log.info("Текущее время: {}", DateTimeConverter.getDateTimeToString(currentDateTime));
+        LocalDateTime currentDateTime = dateTimeProvider.getDate();
+        log.info("Текущее время: {}", DateTimeConverter.getDateTimeToString(currentDateTime));
 
-            if (isEvenSecond(currentDateTime.getSecond())) {
-                throw new EvenSecondException(currentDateTime);
-            }
-
-            originator.saveState(state);
-        } catch (RuntimeException e) {
-            log.warn(e.getMessage());
-            state = originator.restoreState();
+        if (isEvenSecond(currentDateTime.getSecond())) {
+            throw new EvenSecondException(currentDateTime);
         }
 
-        return state == null ? null : state.getMessage();
+        originator.saveState(state);
+
+        return state.getMessage();
     }
 
     private boolean isEvenSecond(int second) {

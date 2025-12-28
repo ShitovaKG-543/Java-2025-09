@@ -9,7 +9,7 @@ public class TestContainersConfig {
 
     public static class CustomPostgreSQLContainer extends PostgreSQLContainer<CustomPostgreSQLContainer> {
         private static CustomPostgreSQLContainer container;
-        private static final String IMAGE_VERSION = "postgres:12";
+        private static final String IMAGE_VERSION = "postgres:13.10-alpine";
 
         public CustomPostgreSQLContainer() {
             super(IMAGE_VERSION);

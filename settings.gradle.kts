@@ -9,6 +9,7 @@ include("hw07-patterns")
 include("hw08-serialization")
 include("hw09-jdbc:demo")
 include("hw09-jdbc:homework")
+include("hw10-hibernate")
 
 pluginManagement {
     val jgitver: String by settings

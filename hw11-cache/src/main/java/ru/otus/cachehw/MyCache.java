@@ -23,8 +23,6 @@ public class MyCache<K, V> implements HwCache<K, V> {
 
         cache.put(key, value);
         notifyListeners(key, value, "PUT");
-        // Проверка памяти и очистка при необходимости
-        checkMemoryAndCleanup();
     }
 
     @Override
@@ -88,48 +86,9 @@ public class MyCache<K, V> implements HwCache<K, V> {
                     listener.notify(key, value, action);
                 } catch (Exception e) {
                     // Логируем ошибку, но не прерываем выполнение
-                    System.err.println("Ошибка уведомления листнера: " + e.getMessage());
+                    log.error("Ошибка уведомления листнера: {}", e.getMessage());
                 }
             }
         }
-    }
-
-    /**
-     * Проверяет состояние памяти и при необходимости очищает кэш
-     */
-    private void checkMemoryAndCleanup() {
-        Runtime runtime = Runtime.getRuntime();
-        long freeMemory = runtime.freeMemory();
-        long totalMemory = runtime.totalMemory();
-        long usedMemory = totalMemory - freeMemory;
-        long maxMemory = runtime.maxMemory();
-
-        // Если используется более 80% памяти, очищаем кэш
-        double memoryUsageRatio = (double) usedMemory / maxMemory;
-
-        log.info("Использовано памяти: {}", memoryUsageRatio);
-
-        // указан такой маленьких процент заполненности памяти, для демонстрации работы кеша при недостатке памяти
-        if (memoryUsageRatio > 0.0035) {
-            log.warn("Обнаружен недостаток памяти ({} % использовано). Очистка кэша...", memoryUsageRatio * 100);
-            clearCache();
-        }
-    }
-
-    /**
-     * Очистка кэша при нехватке памяти
-     */
-    private void clearCache() {
-        int beforeSize = cache.size();
-
-        cache.clear();
-
-        // Принудительный вызов GC
-        System.gc();
-
-        log.info("Кэш очищен. Размер до: {}, после: 0", beforeSize);
-
-        // Уведомляем слушателей о полной очистке
-        notifyListeners(null, null, "CLEAR_ALL");
     }
 }

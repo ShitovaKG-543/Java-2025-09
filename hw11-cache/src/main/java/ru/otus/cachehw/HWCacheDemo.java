@@ -44,20 +44,6 @@ public class HWCacheDemo {
                 timeWithCache,
                 timeWithoutCache,
                 timeWithoutCache - timeWithCache);
-
-        log.info("\n=== ТЕСТ С КЭШЕМ И ПЕРЕПОЛНЕНИЕМ ПАМЯТИ ===");
-        testMemoryShortage(transactionRunner);
-    }
-
-    private void testMemoryShortage(TransactionRunnerJdbc transactionRunner) {
-        var dbExecutor = new DbExecutorImpl();
-        var clientTemplate = new ClientDataTemplateJdbc(dbExecutor);
-
-        DBServiceClient serviceWithCache = DbServiceClientFactory.createWithCache(transactionRunner, clientTemplate);
-        List<Long> clientIds = prepareTestData(transactionRunner, serviceWithCache, 1000);
-        // Демонстрирует то, что из-за нехватки памяти часть данных в кэше была очищена, поэтому при получении клиента
-        // он будет занесен повторно в кэш
-        serviceWithCache.getClient(clientIds.getFirst());
     }
 
     private long testWithCache(TransactionRunnerJdbc transactionRunner) {

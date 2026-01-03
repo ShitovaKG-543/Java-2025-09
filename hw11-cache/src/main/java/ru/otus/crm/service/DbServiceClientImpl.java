@@ -127,9 +127,6 @@ public class DbServiceClientImpl implements DBServiceClient {
                 case "REMOVE":
                     log.debug("Cache REMOVE - Key: {}", key);
                     break;
-                case "CLEAR_ALL":
-                    log.debug("Cache CLEAR_ALL");
-                    break;
                 default:
                     log.debug("Cache {} - Key: {}, Value: {}", action, key, value);
             }

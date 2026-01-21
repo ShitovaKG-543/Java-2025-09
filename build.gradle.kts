@@ -28,6 +28,7 @@ allprojects {
     val redisson: String by project
     val byteBuddy: String by project
     val lombok: String by project
+    val reflections: String by project
 
     apply(plugin = "io.spring.dependency-management")
     dependencyManagement {
@@ -47,6 +48,7 @@ allprojects {
             dependency("org.redisson:redisson:$redisson")
             dependency("net.bytebuddy:byte-buddy:$byteBuddy")
             dependency("org.projectlombok:lombok:$lombok")
+            dependency("org.reflections:reflections:$reflections")
         }
     }
 

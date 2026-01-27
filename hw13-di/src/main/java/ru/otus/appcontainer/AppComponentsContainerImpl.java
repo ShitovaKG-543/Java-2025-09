@@ -37,8 +37,8 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
     }
 
     public AppComponentsContainerImpl(String packageName) {
-        Set<Class<?>> configClasses = findConfigClassesUsingReflections(packageName);
-        processConfigs(configClasses.stream().toList());
+        List<Class<?>> configClasses = findConfigClassesUsingReflections(packageName);
+        processConfigs(configClasses);
     }
 
     @Override
@@ -102,7 +102,7 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
         }
     }
 
-    private Set<Class<?>> findConfigClassesUsingReflections(String packageName) {
+    private List<Class<?>> findConfigClassesUsingReflections(String packageName) {
         try {
             Reflections reflections = new Reflections(
                     new ConfigurationBuilder().forPackages(packageName).addScanners(Scanners.TypesAnnotated));
@@ -112,7 +112,9 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
             return configClasses.stream()
                     .sorted(Comparator.comparingInt(clazz -> clazz.getAnnotation(AppComponentsContainerConfig.class)
                             .order()))
-                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new))
+                    .stream()
+                    .toList();
 
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при сканировании пакета " + packageName, e);

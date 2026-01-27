@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить клиента</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; }
+        .btn { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .phone-item { display: flex; gap: 10px; margin-bottom: 10px; }
+        .phone-item input { flex: 1; }
+        .btn-secondary { background: #6c757d; }
+        .links { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Добавить клиента</h1>
+
+    <div class="links">
+        <a href="/clients">← Назад к списку</a>
+    </div>
+
+    <form id="clientForm">
+        <div class="form-group">
+            <label>Имя клиента *</label>
+            <input type="text" id="name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Адрес</label>
+            <input type="text" id="street">
+        </div>
+
+        <div class="form-group">
+            <label>Телефоны</label>
+            <div id="phones-container">
+                <div class="phone-item">
+                    <input type="text" class="phone-input" placeholder="Номер телефона">
+                    <button type="button" class="btn btn-secondary" onclick="removePhone(this)" style="display: none;">✕</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="addPhone()">+ Добавить телефон</button>
+        </div>
+
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='/clients'">Отмена</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('clientForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const clientData = {
+            name: document.getElementById('name').value.trim(),
+            street: document.getElementById('street').value.trim(),
+            phones: Array.from(document.querySelectorAll('.phone-input'))
+                .map(input => input.value.trim())
+                .filter(phone => phone)
+        };
+
+        if (!clientData.name) {
+            alert('Введите имя клиента');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(clientData)
+            });
+
+            if (response.ok) {
+                alert('Клиент успешно создан');
+                window.location.href = '/clients';
+            } else {
+                const error = await response.text();
+                alert('Ошибка: ' + error);
+            }
+        } catch (error) {
+            alert('Ошибка сети: ' + error.message);
+        }
+    });
+
+    function addPhone() {
+        const container = document.getElementById('phones-container');
+        const div = document.createElement('div');
+        div.className = 'phone-item';
+        div.innerHTML = `
+                <input type="text" class="phone-input" placeholder="Номер телефона">
+                <button type="button" class="btn btn-secondary" onclick="removePhone(this)">✕</button>
+            `;
+        container.appendChild(div);
+    }
+
+    function removePhone(button) {
+        const container = document.getElementById('phones-container');
+        if (container.children.length > 1) {
+            button.parentElement.remove();
+        }
+    }
+</script>
+</body>
+</html>

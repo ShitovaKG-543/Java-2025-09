@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Клиенты</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .nav-links {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .nav-links a {
+            margin: 0 10px;
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<h1>Клиенты</h1>
+<div class="nav-links">
+    <a href="/">На главную</a> |
+    <a href="/clients/new">Добавить клиента</a>
+</div>
+
+<#if clients?? && clients?has_content>
+<table>
+    <tr><th>ID</th><th>Имя</th><th>Адрес</th><th>Телефоны</th></tr>
+    <#list clients?sort_by("id") as client>
+    <tr>
+        <td>${client.id!''}</td>
+        <td>${client.name!''}</td>
+        <td>${(client.address.street)!'-'}</td>
+        <td>
+            <#if client.phones?? && client.phones?has_content>
+            <#list client.phones as phone>${phone.number!''}<#if phone_has_next>, </#if></#list>
+    <#else>-</#if>
+</td>
+</tr>
+</#list>
+</table>
+<#else>
+<p>Нет клиентов.</p>
+</#if>
+</body>
+</html>

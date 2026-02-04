@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Добавить клиента</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Добавить клиента</h2>
+                <a href="/clients" class="btn btn-outline-secondary btn-sm">
+                    ← Назад
+                </a>
+            </div>
+
+            <!-- Форма -->
+            <form th:action="@{/clients}" th:object="${clientDto}" method="post" id="clientForm">
+                <!-- Поле имени -->
+                <div class="mb-3">
+                    <label for="name" class="form-label">Имя клиента *</label>
+                    <input type="text"
+                           class="form-control"
+                           id="name"
+                           th:field="*{name}"
+                           placeholder="Введите имя"
+                           required>
+                </div>
+
+                <!-- Поле адреса -->
+                <div class="mb-3">
+                    <label for="street" class="form-label">Адрес</label>
+                    <input type="text"
+                           class="form-control"
+                           id="street"
+                           th:field="*{street}"
+                           placeholder="Введите адрес">
+                </div>
+
+                <!-- Телефоны -->
+                <div class="mb-4">
+                    <label class="form-label">Телефоны</label>
+                    <div id="phones-container" class="mb-2">
+                        <!-- Первое поле телефона -->
+                        <div class="input-group mb-2">
+                            <input type="text"
+                                   class="form-control phone-input"
+                                   name="phones"
+                                   placeholder="Номер телефона"
+                                   th:value="${clientDto != null && clientDto.phones != null && !clientDto.phones.isEmpty() ? clientDto.phones[0] : ''}">
+                            <button type="button"
+                                    class="btn btn-outline-secondary remove-btn"
+                                    onclick="removePhone(this)"
+                                    disabled>
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            onclick="addPhone()">
+                        + Добавить телефон
+                    </button>
+                </div>
+
+                <!-- Кнопки -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        Сохранить клиента
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let phoneCounter = 1; // Счетчик для отслеживания индексов
+
+    // Добавить поле для телефона
+    function addPhone() {
+        const container = document.getElementById('phones-container');
+
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+
+        div.innerHTML = `
+            <input type="text"
+                   class="form-control phone-input"
+                   name="phones"
+                   placeholder="Номер телефона">
+            <button type="button"
+                    class="btn btn-outline-danger remove-btn"
+                    onclick="removePhone(this)">
+                ✕
+            </button>
+        `;
+
+        container.appendChild(div);
+        phoneCounter++;
+
+        // Разблокировать кнопку удаления у первого поля, если есть второе
+        if (container.children.length === 2) {
+            const firstRemoveBtn = container.children[0].querySelector('.remove-btn');
+            firstRemoveBtn.disabled = false;
+            firstRemoveBtn.classList.replace('btn-outline-secondary', 'btn-outline-danger');
+        }
+    }
+
+    // Удалить поле телефона
+    function removePhone(button) {
+        const container = document.getElementById('phones-container');
+
+        if (container.children.length > 1) {
+            button.parentElement.remove();
+
+            // Если осталось только одно поле, заблокировать кнопку удаления
+            if (container.children.length === 1) {
+                const firstRemoveBtn = container.children[0].querySelector('.remove-btn');
+                firstRemoveBtn.disabled = true;
+                firstRemoveBtn.classList.replace('btn-outline-danger', 'btn-outline-secondary');
+            }
+        }
+    }
+
+    // Обработчик отправки формы для отладки
+    document.getElementById('clientForm').addEventListener('submit', function(e) {
+        // Отладочная информация
+        const phoneInputs = document.querySelectorAll('.phone-input');
+        console.log('Отправляемые телефоны:');
+        phoneInputs.forEach((input, index) => {
+            console.log(`Телефон ${index}: ${input.value}`);
+        });
+    });
+</script>
+</body>
+</html>

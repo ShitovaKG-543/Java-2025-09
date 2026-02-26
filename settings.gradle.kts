@@ -15,6 +15,7 @@ include("hw12-web-server")
 include("hw13-di")
 include("hw14-spring-boot")
 include("hw15-executors")
+include("hw16-queues")
 
 pluginManagement {
     val jgitver: String by settings

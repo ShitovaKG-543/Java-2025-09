@@ -1,0 +1,74 @@
+# Telegram Bot Configuration
+telegram:
+  bot:
+    token: "test"  # Ваш реальный токен
+    username: "test"  # Ваш реальный username бота
+
+# Почта России API Tracking (SOAP)
+russianpost:
+  tracking:
+    login: "test"
+    password: "test"
+
+# СДЭК API (для примера)
+cdek:
+  api:
+    url: "https://api.cdek.ru/v2"
+    client-id: "YOUR_CLIENT_ID_HERE"
+    client-secret: "YOUR_CLIENT_SECRET_HERE"
+
+# Database Configuration
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/trackingbot;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Scheduler Configuration
+scheduler:
+  tracking:
+    fixed-delay: 3600000  # 1 hour in milliseconds
+    initial-delay: 10000   # 10 seconds
+
+# Logging Configuration
+logging:
+  level:
+    com.example.trackingbot: DEBUG
+    org.telegram: INFO
+    org.springframework.web: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/tracking-bot.log
+    max-size: 10MB
+    max-history: 30
+
+# Server Configuration (for health checks)
+server:
+  port: 8080
+  shutdown: graceful
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,58 @@
+## Telegram Bot Configuration
+#telegram:
+#  bot:
+#    token: "YOUR_BOT_TOKEN_HERE"  # Получить у @BotFather
+#    username: "YourBotUsername"     # Имя бота (без @)
+#
+## API Keys для служб доставки
+#api:
+#  cdek:
+#    client-id: "YOUR_CDEK_CLIENT_ID"
+#    client-secret: "YOUR_CDEK_CLIENT_SECRET"
+#    tracking-url: "https://api.cdek.ru/v2/orders/tracking"
+#    auth-url: "https://api.cdek.ru/v2/oauth/token"
+#
+#  russian-post:
+#    api-key: "YOUR_RUSSIAN_POST_API_KEY"
+#    tracking-url: "https://tracking.russianpost.ru/fc/api/v2/tracking/feas"
+#
+## Настройки бота
+#bot:
+#  max-history-events: 5  # Максимальное количество событий в истории
+#  date-format: "dd.MM.yyyy HH:mm:ss"
+#  language: "ru"
+#
+## Настройки логирования
+#logging:
+#  level: "INFO"
+#  file: "logs/tracking-bot.log"
+
+# Telegram Bot Configuration
+telegram:
+  bot:
+    token: "test"  # Ваш реальный токен
+    username: "test"  # Ваш реальный username бота
+
+# API Keys для служб доставки (пока оставим заглушки)
+api:
+  cdek:
+    client-id: "7JM7K5twfzEV1ssCRklthcIPbbVZrZrZ"
+    client-secret: "t8XBoL1rUofIK9dKoXVB3Tji2F2hPHSk"
+    # ИСПОЛЬЗУЕМ БОЕВОЙ URL
+    auth-url: "https://api.cdek.ru/v2/oauth/token"
+    tracking-url: "https://api.cdek.ru/v2/orders/tracking"
+
+  russian-post:
+    api-key: "test"
+    tracking-url: "https://tracking.russianpost.ru/fc/api/v2/tracking/feas"
+
+# Настройки бота
+bot:
+  max-history-events: 5
+  date-format: "dd.MM.yyyy HH:mm:ss"
+  language: "ru"
+
+# Настройки логирования
+logging:
+  level: "INFO"
+  file: "logs/tracking-bot.log"

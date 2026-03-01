@@ -38,3 +38,5 @@ pluginManagement {
         id("com.diffplug.spotless") version spotless
     }
 }
+include("pw-tracking-box")
+include("pw-tracking")

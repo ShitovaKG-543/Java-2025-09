@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  tracking-bot:
+    build: .
+    container_name: tracking-bot
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - RUSSIANPOST_TRACKING_LOGIN=${RUSSIANPOST_TRACKING_LOGIN}
+      - RUSSIANPOST_TRACKING_PASSWORD=${RUSSIANPOST_TRACKING_PASSWORD}
+      - CDEK_API_CLIENT_ID=${CDEK_API_CLIENT_ID}
+      - CDEK_API_CLIENT_SECRET=${CDEK_API_CLIENT_SECRET}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

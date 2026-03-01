@@ -37,11 +37,21 @@ allprojects {
     val bootstrap: String by project
     val springDocOpenapiUi: String by project
     val jsr305: String by project
+    val postgree: String by project
 
     val grpc: String by project
 
     val wiremock: String by project
     val r2dbcPostgresql: String by project
+
+    val caffeine: String by project
+    val telegrambotsspringbootstarter: String by project
+    val bindapi: String by project
+    val jaxbruntime: String by project
+    val soapapi: String by project
+    val saajimpl: String by project
+    val wsapi: String by project
+    val wsdl4j: String by project
 
     apply(plugin = "io.spring.dependency-management")
     dependencyManagement {
@@ -88,6 +98,16 @@ allprojects {
 
             dependency("com.github.tomakehurst:wiremock-standalone:$wiremock")
             dependency("io.r2dbc:r2dbc-postgresql:$r2dbcPostgresql")
+            dependency("org.postgresql:postgresql:$postgree")
+
+            dependency("com.github.ben-manes.caffeine:caffeine:$caffeine")
+            dependency("org.telegram:telegrambots-spring-boot-starter:$telegrambotsspringbootstarter")
+            dependency("jakarta.xml.bind:jakarta.xml.bind-api:$bindapi")
+            dependency("jakarta.xml.bind:jakarta.xml.bind-api:$jaxbruntime")
+            dependency("jakarta.xml.soap:jakarta.xml.soap-api:$soapapi")
+            dependency("com.sun.xml.messaging.saaj:saaj-impl:$saajimpl")
+            dependency("jakarta.xml.ws:jakarta.xml.ws-api:$wsapi")
+            dependency("wsdl4j:wsdl4j:$wsdl4j")
         }
     }
 

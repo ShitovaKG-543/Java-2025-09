@@ -40,3 +40,4 @@ pluginManagement {
 }
 include("pw-tracking-box")
 include("pw-tracking")
+include("kaledoscope")

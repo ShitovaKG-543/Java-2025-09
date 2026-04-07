@@ -1,0 +1,20 @@
+bot:
+  token: "YOUR_BOT_TOKEN"
+  username: "YourPostBot"
+
+database:
+  url: "jdbc:postgresql://localhost:5432/postbot"
+  user: "postgres"
+  password: "password"
+
+postal:
+  russianpost:
+    wsdl: "https://tracking.russianpost.ru/rtm34?wsdl"
+  cache:
+    ttl-minutes: 5
+  scheduler:
+    cron: "0 0 0 * * ?"  # каждый день в полночь
+
+postal-services:
+  enabled:
+    - "RussianPost"

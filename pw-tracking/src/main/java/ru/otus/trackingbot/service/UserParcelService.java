@@ -15,16 +15,6 @@ import ru.otus.trackingbot.repository.UserParcelRepository;
 
 /**
  * Сервис для управления связями пользователей с посылками.
- * <p>
- * Предоставляет методы для:
- * <ul>
- *     <li>Добавления посылок в отслеживание</li>
- *     <li>Получения списка посылок пользователя</li>
- *     <li>Обновления статусов отслеживания</li>
- *     <li>Остановки/возобновления отслеживания</li>
- *     <li>Удаления посылок из отслеживания</li>
- * </ul>
- * </p>
  */
 @Service
 @Slf4j
@@ -35,15 +25,6 @@ public class UserParcelService {
 
     /**
      * Добавляет посылку для отслеживания пользователю.
-     * <p>
-     * Если посылка уже была в отслеживании, но деактивирована,
-     * реактивирует её и сбрасывает счетчик уведомлений.
-     * </p>
-     *
-     * @param user пользователь
-     * @param parcel посылка
-     * @param customName пользовательское имя для посылки (может быть null)
-     * @return созданная или обновленная связь
      */
     @Transactional
     public UserParcel addParcelForUser(User user, Parcel parcel, String customName) {
@@ -56,7 +37,6 @@ public class UserParcelService {
                 userParcel.setIsActive(true);
                 userParcel.setAddedAt(LocalDateTime.now());
                 if (customName != null) userParcel.setCustomName(customName);
-                // Сбрасываем счетчик уведомлений при реактивации
                 userParcel.setNotificationCount(0);
                 userParcel.setLastNotification(null);
                 return userParcelRepository.save(userParcel);
@@ -77,9 +57,6 @@ public class UserParcelService {
 
     /**
      * Обновляет статус посылки для пользователя.
-     *
-     * @param userParcel связь пользователя с посылкой
-     * @param trackingInfo информация об отслеживании
      */
     @Transactional
     public void updateUserParcelStatus(UserParcel userParcel, TrackingInfo trackingInfo) {
@@ -97,13 +74,6 @@ public class UserParcelService {
 
     /**
      * Возвращает все активные посылки пользователя с полной информацией.
-     * <p>
-     * Использует JOIN FETCH для загрузки связанных сущностей
-     * и предотвращения N+1 проблемы.
-     * </p>
-     *
-     * @param user пользователь
-     * @return список активных посылок с подгруженными данными
      */
     @Transactional(readOnly = true)
     public List<UserParcel> getActiveUserParcelsWithDetails(User user) {
@@ -111,10 +81,15 @@ public class UserParcelService {
     }
 
     /**
+     * Возвращает все посылки пользователя (активные и неактивные) с полной информацией.
+     */
+    @Transactional(readOnly = true)
+    public List<UserParcel> getAllUserParcelsWithDetails(User user) {
+        return userParcelRepository.findAllByUserWithDetails(user);
+    }
+
+    /**
      * Возвращает все активные посылки пользователя (без подгрузки связей).
-     *
-     * @param user пользователь
-     * @return список активных посылок
      */
     @Transactional(readOnly = true)
     public List<UserParcel> getActiveUserParcels(User user) {
@@ -123,10 +98,6 @@ public class UserParcelService {
 
     /**
      * Находит связь пользователя с посылкой по трек-номеру.
-     *
-     * @param user пользователь
-     * @param trackingNumber трек-номер
-     * @return Optional со связью
      */
     @Transactional(readOnly = true)
     public Optional<UserParcel> findByUserAndTrackingNumber(User user, String trackingNumber) {
@@ -135,27 +106,15 @@ public class UserParcelService {
 
     /**
      * Возвращает список посылок, требующих обновления статуса.
-     * <p>
-     * Отбираются активные посылки, у которых lastChecked
-     * был более 5 минут назад.
-     * </p>
-     *
-     * @return список посылок для обновления
      */
     @Transactional(readOnly = true)
     public List<UserParcel> getParcelsToUpdateWithDetails() {
-        LocalDateTime cutoffTime = LocalDateTime.now().minusHours(1);
+        LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(5);
         return userParcelRepository.findUserParcelsToUpdateWithDetails(cutoffTime);
     }
 
     /**
      * Фиксирует отправку уведомления для посылки.
-     * <p>
-     * Обновляет дату последнего уведомления и увеличивает счетчик.
-     * </p>
-     *
-     * @param userParcel связь пользователя с посылкой
-     * @param message текст отправленного уведомления (не используется, но может пригодиться для логирования)
      */
     @Transactional
     public void sendNotification(UserParcel userParcel, String message) {
@@ -166,10 +125,6 @@ public class UserParcelService {
 
     /**
      * Находит связь пользователя с посылкой по ID с подгрузкой всех связей.
-     *
-     * @param id идентификатор связи
-     * @param user пользователь
-     * @return Optional со связью
      */
     @Transactional(readOnly = true)
     public Optional<UserParcel> findByIdWithDetails(Long id, User user) {
@@ -178,12 +133,6 @@ public class UserParcelService {
 
     /**
      * Полностью удаляет посылку из отслеживания пользователя.
-     * <p>
-     * В отличие от stopTracking, этот метод удаляет запись из базы данных.
-     * История статусов посылки при этом сохраняется (сама посылка не удаляется).
-     * </p>
-     *
-     * @param userParcel связь пользователя с посылкой
      */
     @Transactional
     public void deleteUserParcel(UserParcel userParcel) {
@@ -192,14 +141,6 @@ public class UserParcelService {
 
     /**
      * Останавливает отслеживание посылки (без удаления).
-     * <p>
-     * Устанавливает флаг isActive = false, но сохраняет запись в базе.
-     * Отслеживание может быть возобновлено позже.
-     * </p>
-     *
-     * @param user пользователь
-     * @param trackingNumber трек-номер посылки
-     * @return true если отслеживание успешно остановлено
      */
     @Transactional
     public boolean stopTracking(User user, String trackingNumber) {
@@ -209,10 +150,5 @@ public class UserParcelService {
             return true;
         }
         return false;
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserParcel> getAllUserParcelsWithDetails(User user) {
-        return userParcelRepository.findAllByUserWithDetails(user);
     }
 }

@@ -1,10 +1,10 @@
 -- =====================================================
 -- ТАБЛИЦА ПОСЫЛОК (parcels)
 -- Хранит базовую информацию о посылках (не зависит от пользователя)
+-- Использует tracking_number в качестве первичного ключа (натуральный ключ)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS parcels (
-    id BIGSERIAL PRIMARY KEY,                           -- Уникальный идентификатор посылки
-    tracking_number VARCHAR(50) NOT NULL UNIQUE,        -- Трек-номер посылки (уникальный, основной ключ поиска)
+    tracking_number VARCHAR(50) PRIMARY KEY,            -- Трек-номер посылки (первичный ключ)
     service_name VARCHAR(50) NOT NULL,                  -- Название службы доставки (например, "Почта России")
     description TEXT,                                   -- Описание посылки (может содержать перечень вложений)
     weight DECIMAL(10, 2),                              -- Вес посылки в килограммах (с точностью до 2 знаков)
@@ -16,5 +16,4 @@ CREATE TABLE IF NOT EXISTS parcels (
 );
 
 -- Индексы для таблицы посылок
-CREATE INDEX idx_parcels_tracking_number ON parcels(tracking_number); -- Быстрый поиск по трек-номеру (основной способ)
-CREATE INDEX idx_parcels_service ON parcels(service_name);            -- Поиск по службе доставки (для статистики)
+CREATE INDEX idx_parcels_service ON parcels(service_name);  -- Поиск по службе доставки (для статистики)

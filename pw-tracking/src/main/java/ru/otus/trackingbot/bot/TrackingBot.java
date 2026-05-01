@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -35,29 +34,15 @@ import ru.otus.trackingbot.util.TrackingNumberUtils;
 @Slf4j
 public class TrackingBot extends TelegramLongPollingBot {
 
-    @Value("${telegram.bot.username}")
-    private String botUsername;
+    private final String botUsername;
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private ParcelService parcelService;
-
-    @Autowired
-    private UserParcelService userParcelService;
-
-    @Autowired
-    private TrackingCacheService trackingCacheService;
-
-    @Autowired
-    private TrackingServiceFactory trackingServiceFactory;
-
-    @Autowired
-    private KeyboardFactory keyboardFactory;
-
-    @Autowired
-    private BotInfoConfig botInfoConfig;
+    private final UserService userService;
+    private final ParcelService parcelService;
+    private final UserParcelService userParcelService;
+    private final TrackingCacheService trackingCacheService;
+    private final TrackingServiceFactory trackingServiceFactory;
+    private final KeyboardFactory keyboardFactory;
+    private final BotInfoConfig botInfoConfig;
 
     /**
      * Хранилище состояния ожидания ввода трек-номера для каждого пользователя.
@@ -67,20 +52,57 @@ public class TrackingBot extends TelegramLongPollingBot {
     /**
      * Флаг для отключения регистрации команд при тестировании
      */
-    private boolean skipCommandRegistration = false;
+    private final boolean skipCommandRegistration;
 
-    public TrackingBot(@Value("${telegram.bot.token}") String botToken) {
+    /**
+     * Основной конструктор для Spring.
+     */
+    public TrackingBot(
+            @Value("${telegram.bot.token}") String botToken,
+            @Value("${telegram.bot.username}") String botUsername,
+            UserService userService,
+            ParcelService parcelService,
+            UserParcelService userParcelService,
+            TrackingCacheService trackingCacheService,
+            TrackingServiceFactory trackingServiceFactory,
+            KeyboardFactory keyboardFactory,
+            BotInfoConfig botInfoConfig) {
         super(botToken);
-        if (!skipCommandRegistration) {
-            registerCommands();
-        }
+        this.botUsername = botUsername;
+        this.userService = userService;
+        this.parcelService = parcelService;
+        this.userParcelService = userParcelService;
+        this.trackingCacheService = trackingCacheService;
+        this.trackingServiceFactory = trackingServiceFactory;
+        this.keyboardFactory = keyboardFactory;
+        this.botInfoConfig = botInfoConfig;
+        this.skipCommandRegistration = false;
+        registerCommands();
     }
 
     /**
-     * Конструктор для тестирования - позволяет отключить регистрацию команд
+     * Конструктор для тестирования - позволяет отключить регистрацию команд.
      */
-    protected TrackingBot(String botToken, boolean skipCommandRegistration) {
+    protected TrackingBot(
+            String botToken,
+            String botUsername,
+            boolean skipCommandRegistration,
+            UserService userService,
+            ParcelService parcelService,
+            UserParcelService userParcelService,
+            TrackingCacheService trackingCacheService,
+            TrackingServiceFactory trackingServiceFactory,
+            KeyboardFactory keyboardFactory,
+            BotInfoConfig botInfoConfig) {
         super(botToken);
+        this.botUsername = botUsername;
+        this.userService = userService;
+        this.parcelService = parcelService;
+        this.userParcelService = userParcelService;
+        this.trackingCacheService = trackingCacheService;
+        this.trackingServiceFactory = trackingServiceFactory;
+        this.keyboardFactory = keyboardFactory;
+        this.botInfoConfig = botInfoConfig;
         this.skipCommandRegistration = skipCommandRegistration;
         if (!skipCommandRegistration) {
             registerCommands();
@@ -202,7 +224,7 @@ public class TrackingBot extends TelegramLongPollingBot {
             parcelId = Long.parseLong(idStr);
         } catch (NumberFormatException e) {
             log.debug("Не удалось распарсить ID из callback: {}, обрабатываем как простой callback", callbackData);
-            handleSimpleCallback(callbackData, chatId); // Исправлено: вызываем handleSimpleCallback
+            handleSimpleCallback(callbackData, chatId);
             return;
         }
 
@@ -226,7 +248,7 @@ public class TrackingBot extends TelegramLongPollingBot {
                 break;
             default:
                 log.warn("Неизвестный callback: {}", callbackData);
-                sendMainMenu(chatId); // Показываем главное меню как fallback
+                sendMainMenu(chatId);
         }
     }
 
@@ -607,8 +629,7 @@ public class TrackingBot extends TelegramLongPollingBot {
                     userParcel.getParcel().getServiceName(),
                     userParcel.getLastStatus() != null ? userParcel.getLastStatus() : "Статус неизвестен");
 
-            sendInlineKeyboard(
-                    chatId, text, keyboardFactory.getParcelActionsKeyboard(parcelId, false)); // isActive = false
+            sendInlineKeyboard(chatId, text, keyboardFactory.getParcelActionsKeyboard(parcelId, false));
         } else {
             sendMessage(chatId, BotConstants.MSG_ERROR_STOP_TRACKING);
         }
@@ -639,7 +660,7 @@ public class TrackingBot extends TelegramLongPollingBot {
                 userParcel.getParcel().getServiceName(),
                 userParcel.getLastStatus() != null ? userParcel.getLastStatus() : "Статус неизвестен");
 
-        sendInlineKeyboard(chatId, text, keyboardFactory.getParcelActionsKeyboard(parcelId, true)); // isActive = true
+        sendInlineKeyboard(chatId, text, keyboardFactory.getParcelActionsKeyboard(parcelId, true));
     }
 
     private void deleteParcel(long chatId, Long parcelId) {

@@ -37,51 +37,56 @@ public class User {
      * Уникальный идентификатор чата в Telegram.
      * Используется для отправки сообщений конкретному пользователю.
      */
-    @Column(nullable = false, unique = true)
+    @Column(name = "chat_id", nullable = false, unique = true)
     private Long chatId;
 
     /**
      * Username пользователя в Telegram.
      */
+    @Column(length = 100)
     private String username;
 
     /**
      * Имя пользователя.
      */
+    @Column(name = "first_name", length = 100)
     private String firstName;
 
     /**
      * Фамилия пользователя.
      */
+    @Column(name = "last_name", length = 100)
     private String lastName;
 
     /**
      * Код языка пользователя.
      */
+    @Column(name = "language_code", length = 10)
     private String languageCode;
 
     /**
      * Статус активности пользователя (не забанен/активен).
      */
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     /**
      * Дата и время регистрации пользователя.
      */
-    @Column(nullable = false)
+    @Column(name = "registered_at", nullable = false)
     private LocalDateTime registeredAt;
 
     /**
      * Дата и время последней активности пользователя.
      */
+    @Column(name = "last_activity")
     private LocalDateTime lastActivity;
 
     /**
      * Флаг включения уведомлений для пользователя.
      * Если false - пользователь не получает уведомлений об изменениях статусов.
      */
-    @Column(nullable = false)
+    @Column(name = "notification_enabled", nullable = false)
     private Boolean notificationEnabled = true;
 
     /**

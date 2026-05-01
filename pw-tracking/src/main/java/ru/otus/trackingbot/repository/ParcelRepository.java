@@ -8,18 +8,21 @@ import ru.otus.trackingbot.entity.Parcel;
 /**
  * Репозиторий для работы с сущностью {@link Parcel}.
  * <p>
- * Предоставляет методы для поиска посылок по трек-номеру
- * и стандартные CRUD операции.
+ * Использует tracking_number в качестве первичного ключа (String).
+ * Предоставляет стандартные CRUD операции через JpaRepository.
  * </p>
  */
 @Repository
-public interface ParcelRepository extends JpaRepository<Parcel, Long> {
+public interface ParcelRepository extends JpaRepository<Parcel, String> {
 
     /**
      * Находит посылку по трек-номеру.
+     * Теперь это просто обертка над findById для удобства.
      *
      * @param trackingNumber трек-номер посылки
      * @return Optional с найденной посылкой или пустой Optional
      */
-    Optional<Parcel> findByTrackingNumber(String trackingNumber);
+    default Optional<Parcel> findByTrackingNumber(String trackingNumber) {
+        return findById(trackingNumber);
+    }
 }

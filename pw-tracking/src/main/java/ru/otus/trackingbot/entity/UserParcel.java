@@ -38,53 +38,59 @@ public class UserParcel {
 
     /**
      * Отслеживаемая посылка.
+     * Ссылается на tracking_number как на первичный ключ.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parcel_id", nullable = false)
+    @JoinColumn(name = "parcel_tracking_number", referencedColumnName = "tracking_number", nullable = false)
     private Parcel parcel;
 
     /**
      * Флаг активности отслеживания.
      * Если false - пользователь остановил отслеживание этой посылки.
      */
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     /**
      * Дата и время добавления посылки в отслеживание.
      */
-    @Column(nullable = false)
+    @Column(name = "added_at", nullable = false)
     private LocalDateTime addedAt;
 
     /**
      * Дата и время последнего отправленного уведомления.
      */
+    @Column(name = "last_notification")
     private LocalDateTime lastNotification;
 
     /**
      * Общее количество отправленных уведомлений по этой посылке.
      */
+    @Column(name = "notification_count")
     private Integer notificationCount = 0;
 
     /**
      * Пользовательское имя для посылки (можно задать понятное название).
      */
+    @Column(name = "custom_name", length = 200)
     private String customName;
 
     /**
      * Последний известный статус посылки (дублируется для быстрого доступа).
      */
+    @Column(name = "last_status", length = 200)
     private String lastStatus;
 
     /**
      * Описание последнего статуса.
      */
-    @Column(length = 1000)
+    @Column(name = "last_status_description", length = 1000)
     private String lastStatusDescription;
 
     /**
      * Дата и время последней проверки статуса.
      */
+    @Column(name = "last_checked")
     private LocalDateTime lastChecked;
 
     /**

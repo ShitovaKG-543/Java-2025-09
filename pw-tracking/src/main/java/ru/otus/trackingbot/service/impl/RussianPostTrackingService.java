@@ -46,7 +46,9 @@ public class RussianPostTrackingService extends AbstractTrackingService {
     @Value("${russianpost.tracking.password}")
     private String password;
 
-    private static final String TRACKING_API_URL = "https://tracking.russianpost.ru/rtm34";
+    @Value("${russianpost.tracking.api.url}")
+    private String trackingApiUrl;
+
     private static final String TRACKING_PATTERN = "^([A-Z]{2}\\d{9}[A-Z]{2}|\\d{14})$";
 
     @Override
@@ -87,27 +89,21 @@ public class RussianPostTrackingService extends AbstractTrackingService {
             return createErrorResponse(cleanNumber, "Ошибка конфигурации: не заданы учетные данные");
         }
 
-        SOAPConnection connection = null;
         try {
-            SOAPConnectionFactory soapConnFactory = SOAPConnectionFactory.newInstance();
-            connection = soapConnFactory.createConnection();
+            SOAPConnectionFactory factory = SOAPConnectionFactory.newInstance();
 
-            SOAPMessage request = createSoapRequest(cleanNumber);
-            SOAPMessage response = connection.call(request, TRACKING_API_URL);
+            try (SOAPConnection connection = factory.createConnection()) {
+                SOAPMessage request = createSoapRequest(cleanNumber);
+                SOAPMessage response = connection.call(request, trackingApiUrl);
+                return parseSoapResponse(response, cleanNumber);
+            } // Автоматическое закрытие connection
 
-            return parseSoapResponse(response, cleanNumber);
-
+        } catch (SOAPException e) {
+            log.error("SOAP ошибка при отслеживании посылки {}", cleanNumber, e);
+            return createErrorResponse(cleanNumber, "Ошибка SOAP: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Ошибка при отслеживании посылки {}", cleanNumber, e);
-            return createErrorResponse(cleanNumber, "Ошибка соединения: " + e.getMessage());
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SOAPException e) {
-                    log.error("Ошибка при закрытии SOAP соединения", e);
-                }
-            }
+            log.error("Неожиданная ошибка при отслеживании посылки {}", cleanNumber, e);
+            return createErrorResponse(cleanNumber, "Ошибка: " + e.getMessage());
         }
     }
 

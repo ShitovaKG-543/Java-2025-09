@@ -25,6 +25,8 @@ import ru.otus.trackingbot.repository.UserParcelRepository;
 @DisplayName("UserParcelService тесты")
 class UserParcelServiceTest {
 
+    private static final String TEST_TRACKING_NUMBER = "TRK123456";
+
     @Mock
     private UserParcelRepository userParcelRepository;
 
@@ -45,7 +47,11 @@ class UserParcelServiceTest {
                 .lastName("Пользователь")
                 .build();
 
-        testParcel = Parcel.builder().id(1L).trackingNumber("TRK123456").build();
+        // Исправлено: у Parcel больше нет поля id
+        testParcel = Parcel.builder()
+                .trackingNumber(TEST_TRACKING_NUMBER)
+                .serviceName("Почта России")
+                .build();
 
         testUserParcel = UserParcel.builder()
                 .id(1L)
@@ -62,7 +68,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен создать новую UserParcel, если отслеживание не найдено")
     void shouldCreateNewUserParcelWhenNotExists() {
-
         String customName = "Моя посылка";
 
         UserParcel savedUserParcel = UserParcel.builder()
@@ -98,7 +103,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен создать UserParcel без пользовательского имени, когда customName равен null")
     void shouldCreateWithoutCustomNameWhenNull() {
-
         when(userParcelRepository.findByUserAndParcelTrackingNumber(testUser, testParcel.getTrackingNumber()))
                 .thenReturn(Optional.empty());
         when(userParcelRepository.save(any(UserParcel.class))).thenReturn(testUserParcel);
@@ -114,7 +118,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен реактивировать неактивную посылку и сбросить счетчик уведомлений")
     void shouldReactivateInactiveParcel() {
-
         UserParcel inactiveParcel = UserParcel.builder()
                 .id(1L)
                 .user(testUser)
@@ -145,7 +148,6 @@ class UserParcelServiceTest {
     @DisplayName(
             "Должен реактивировать неактивную посылку без изменения пользовательского имени, когда customName равен null")
     void shouldReactivateWithoutChangingCustomName() {
-
         UserParcel inactiveParcel = UserParcel.builder()
                 .id(1L)
                 .user(testUser)
@@ -169,7 +171,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть существующую активную посылку без изменений")
     void shouldReturnExistingActiveParcel() {
-
         when(userParcelRepository.findByUserAndParcelTrackingNumber(testUser, testParcel.getTrackingNumber()))
                 .thenReturn(Optional.of(testUserParcel));
 
@@ -186,7 +187,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен обновить статус и описание статуса, когда оба параметра предоставлены")
     void shouldUpdateStatusAndDescription() {
-
         TrackingInfo trackingInfo = TrackingInfo.builder()
                 .status("ДОСТАВЛЕНА")
                 .statusDescription("Вручена получателю")
@@ -203,7 +203,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен обновить только lastChecked, когда trackingInfo равен null")
     void shouldUpdateOnlyLastCheckedWhenTrackingInfoNull() {
-
         LocalDateTime beforeCheck = testUserParcel.getLastChecked();
 
         userParcelService.updateUserParcelStatus(testUserParcel, null);
@@ -218,7 +217,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен обновить только статус, когда описание равно null")
     void shouldUpdateOnlyStatusWhenDescriptionNull() {
-
         TrackingInfo trackingInfo =
                 TrackingInfo.builder().status("В ПУТИ").statusDescription(null).build();
 
@@ -232,7 +230,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен обновить только описание, когда статус равен null")
     void shouldUpdateOnlyDescriptionWhenStatusNull() {
-
         TrackingInfo trackingInfo = TrackingInfo.builder()
                 .status(null)
                 .statusDescription("Обработка на складе")
@@ -248,7 +245,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен обработать trackingInfo с обоими null полями")
     void shouldHandleTrackingInfoWithBothNullFields() {
-
         TrackingInfo trackingInfo =
                 TrackingInfo.builder().status(null).statusDescription(null).build();
 
@@ -265,7 +261,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть активные посылки с деталями")
     void shouldReturnActiveParcelsWithDetails() {
-
         List<UserParcel> expectedParcels = List.of(testUserParcel);
         when(userParcelRepository.findByUserAndIsActiveTrueWithDetails(testUser))
                 .thenReturn(expectedParcels);
@@ -280,7 +275,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть пустой список, когда у пользователя нет активных посылок")
     void shouldReturnEmptyListWhenNoActiveParcels() {
-
         when(userParcelRepository.findByUserAndIsActiveTrueWithDetails(testUser))
                 .thenReturn(List.of());
 
@@ -295,7 +289,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть активные посылки без деталей")
     void shouldReturnActiveParcelsWithoutDetails() {
-
         List<UserParcel> expectedParcels = List.of(testUserParcel);
         when(userParcelRepository.findByUserAndIsActiveTrue(testUser)).thenReturn(expectedParcels);
 
@@ -311,21 +304,19 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть UserParcel при поиске по трек-номеру")
     void shouldReturnUserParcelWhenFoundByTrackingNumber() {
-
-        when(userParcelRepository.findByUserAndParcelTrackingNumber(testUser, "TRK123456"))
+        when(userParcelRepository.findByUserAndParcelTrackingNumber(testUser, TEST_TRACKING_NUMBER))
                 .thenReturn(Optional.of(testUserParcel));
 
-        Optional<UserParcel> result = userParcelService.findByUserAndTrackingNumber(testUser, "TRK123456");
+        Optional<UserParcel> result = userParcelService.findByUserAndTrackingNumber(testUser, TEST_TRACKING_NUMBER);
 
         assertThat(result).isPresent();
         assertThat(result.get()).isEqualTo(testUserParcel);
-        verify(userParcelRepository).findByUserAndParcelTrackingNumber(testUser, "TRK123456");
+        verify(userParcelRepository).findByUserAndParcelTrackingNumber(testUser, TEST_TRACKING_NUMBER);
     }
 
     @Test
     @DisplayName("Должен вернуть пустой Optional, когда трек-номер не найден")
     void shouldReturnEmptyOptionalWhenNotFound() {
-
         when(userParcelRepository.findByUserAndParcelTrackingNumber(testUser, "INVALID"))
                 .thenReturn(Optional.empty());
 
@@ -340,7 +331,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть посылки, не обновлявшиеся последние 5 минут")
     void shouldReturnParcelsNotUpdatedInLast5Minutes() {
-
         List<UserParcel> parcelsToUpdate = List.of(testUserParcel);
         when(userParcelRepository.findUserParcelsToUpdateWithDetails(any(LocalDateTime.class)))
                 .thenReturn(parcelsToUpdate);
@@ -359,7 +349,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть пустой список, когда все посылки актуальны")
     void shouldReturnEmptyListWhenAllParcelsUpToDate() {
-
         when(userParcelRepository.findUserParcelsToUpdateWithDetails(any(LocalDateTime.class)))
                 .thenReturn(List.of());
 
@@ -374,7 +363,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен увеличить счетчик уведомлений и обновить дату последнего уведомления")
     void shouldIncrementNotificationCountAndUpdateDate() {
-
         testUserParcel.setNotificationCount(2);
         LocalDateTime before = testUserParcel.getLastNotification();
 
@@ -389,7 +377,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен корректно обработать первое уведомление")
     void shouldHandleFirstNotificationCorrectly() {
-
         assertThat(testUserParcel.getNotificationCount()).isZero();
         assertThat(testUserParcel.getLastNotification()).isNull();
 
@@ -403,7 +390,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен корректно работать с параметром сообщения, даже когда он не используется")
     void shouldWorkWithMessageParameter() {
-
         userParcelService.sendNotification(testUserParcel, "Любое сообщение");
 
         assertThat(testUserParcel.getNotificationCount()).isEqualTo(1);
@@ -415,7 +401,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть UserParcel при поиске по ID")
     void shouldReturnUserParcelWhenFoundById() {
-
         when(userParcelRepository.findByIdWithDetails(1L, testUser)).thenReturn(Optional.of(testUserParcel));
 
         Optional<UserParcel> result = userParcelService.findByIdWithDetails(1L, testUser);
@@ -428,7 +413,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть пустой Optional, когда ID не найден")
     void shouldReturnEmptyOptionalWhenIdNotFound() {
-
         when(userParcelRepository.findByIdWithDetails(999L, testUser)).thenReturn(Optional.empty());
 
         Optional<UserParcel> result = userParcelService.findByIdWithDetails(999L, testUser);
@@ -442,7 +426,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен удалить UserParcel из репозитория")
     void shouldDeleteUserParcel() {
-
         userParcelService.deleteUserParcel(testUserParcel);
 
         verify(userParcelRepository).delete(testUserParcel);
@@ -451,7 +434,6 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен корректно обработать вызов удаления")
     void shouldHandleDeleteCallCorrectly() {
-
         userParcelService.deleteUserParcel(testUserParcel);
 
         verify(userParcelRepository, times(1)).delete(testUserParcel);
@@ -463,19 +445,18 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен успешно остановить отслеживание и вернуть true")
     void shouldStopTrackingSuccessfully() {
+        when(userParcelRepository.deactivateUserParcel(testUser, TEST_TRACKING_NUMBER))
+                .thenReturn(1);
 
-        when(userParcelRepository.deactivateUserParcel(testUser, "TRK123456")).thenReturn(1);
-
-        boolean result = userParcelService.stopTracking(testUser, "TRK123456");
+        boolean result = userParcelService.stopTracking(testUser, TEST_TRACKING_NUMBER);
 
         assertThat(result).isTrue();
-        verify(userParcelRepository).deactivateUserParcel(testUser, "TRK123456");
+        verify(userParcelRepository).deactivateUserParcel(testUser, TEST_TRACKING_NUMBER);
     }
 
     @Test
     @DisplayName("Должен вернуть false, когда посылка не найдена")
     void shouldReturnFalseWhenParcelNotFound() {
-
         when(userParcelRepository.deactivateUserParcel(testUser, "INVALID")).thenReturn(0);
 
         boolean result = userParcelService.stopTracking(testUser, "INVALID");
@@ -487,13 +468,12 @@ class UserParcelServiceTest {
     @Test
     @DisplayName("Должен вернуть false, когда посылка уже неактивна")
     void shouldReturnFalseWhenParcelAlreadyInactive() {
+        when(userParcelRepository.deactivateUserParcel(testUser, TEST_TRACKING_NUMBER))
+                .thenReturn(0);
 
-        when(userParcelRepository.deactivateUserParcel(testUser, "TRK123456"))
-                .thenReturn(0); // 0 затронутых строк означает, что посылка уже неактивна или не найдена
-
-        boolean result = userParcelService.stopTracking(testUser, "TRK123456");
+        boolean result = userParcelService.stopTracking(testUser, TEST_TRACKING_NUMBER);
 
         assertThat(result).isFalse();
-        verify(userParcelRepository).deactivateUserParcel(testUser, "TRK123456");
+        verify(userParcelRepository).deactivateUserParcel(testUser, TEST_TRACKING_NUMBER);
     }
 }

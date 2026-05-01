@@ -23,7 +23,6 @@ import ru.otus.trackingbot.model.TrackingInfo;
 class ParcelUpdateServiceTest {
 
     private static final String TEST_TRACKING_NUMBER = "RA644000001RU";
-    private static final Long TEST_PARCEL_ID = 1L;
     private static final Long TEST_USER_PARCEL_ID = 100L;
     private static final Long TEST_USER_ID = 1L;
 
@@ -54,8 +53,8 @@ class ParcelUpdateServiceTest {
                 .notificationEnabled(true)
                 .build();
 
+        // Исправлено: у Parcel больше нет поля id
         testParcel = Parcel.builder()
-                .id(TEST_PARCEL_ID)
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
                 .build();
@@ -97,7 +96,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - успешное обновление без изменений статуса")
     void updateParcelStatus_SuccessfulUpdateWithoutStatusChange() {
-
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
                 .thenReturn(testTrackingInfo);
         when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(false);
@@ -122,7 +120,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - успешное обновление с изменением статуса")
     void updateParcelStatus_SuccessfulUpdateWithStatusChange() {
-
         TrackingInfo infoWithNewStatus = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
@@ -163,7 +160,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - успешное обновление с null старым статусом")
     void updateParcelStatus_SuccessfulUpdateWithNullOldStatus() {
-
         testUserParcel.setLastStatus(null);
 
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
@@ -180,23 +176,18 @@ class ParcelUpdateServiceTest {
     }
 
     @Test
-    @DisplayName("updateParcelStatus - успешное обновление с null последним статусом (исправленный тест)")
+    @DisplayName("updateParcelStatus - успешное обновление с null последним статусом")
     void updateParcelStatus_SuccessfulUpdateWithNullLastStatus() {
-
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
                 .thenReturn(testTrackingInfo);
         when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(true);
-        // Возвращаем null, что означает отсутствие истории статусов
         when(parcelService.getLastParcelStatus(testParcel)).thenReturn(null);
 
         ParcelUpdateService.ParcelUpdateResult result = parcelUpdateService.updateParcelStatus(testUserParcel, false);
 
         assertThat(result.isSuccess()).isTrue();
-        // oldStatus = "В пути" (из userParcel)
         assertThat(result.getOldStatus()).isEqualTo("В пути");
-        // newStatus берется из info.getStatus() так как lastStatus = null
         assertThat(result.getNewStatus()).isEqualTo(testTrackingInfo.getStatus());
-        // Статусы разные: "В пути" vs "В пути"? Они одинаковые, поэтому statusChanged = false
         assertThat(result.isStatusChanged()).isFalse();
         assertThat(result.isHasNewStatuses()).isTrue();
     }
@@ -204,7 +195,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - успешное обновление с null последним статусом и новым статусом")
     void updateParcelStatus_SuccessfulUpdateWithNullLastStatusAndNewStatus() {
-
         TrackingInfo infoWithNewStatus = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
@@ -219,16 +209,13 @@ class ParcelUpdateServiceTest {
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
                 .thenReturn(infoWithNewStatus);
         when(parcelService.updateParcelStatus(testParcel, infoWithNewStatus)).thenReturn(true);
-        // Возвращаем null, что означает отсутствие истории статусов
         when(parcelService.getLastParcelStatus(testParcel)).thenReturn(null);
 
         ParcelUpdateService.ParcelUpdateResult result = parcelUpdateService.updateParcelStatus(testUserParcel, false);
 
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.getOldStatus()).isEqualTo("В пути");
-        // newStatus берется из info.getStatus() так как lastStatus = null
         assertThat(result.getNewStatus()).isEqualTo("Доставлен");
-        // Статусы разные: "В пути" vs "Доставлен"
         assertThat(result.isStatusChanged()).isTrue();
         assertThat(result.isHasNewStatuses()).isTrue();
     }
@@ -240,7 +227,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - принудительное обновление (forceFresh = true)")
     void updateParcelStatus_ForceFresh_ShouldUseFreshTrackingInfo() {
-
         when(trackingCacheService.getFreshTrackingInfo(TEST_TRACKING_NUMBER)).thenReturn(testTrackingInfo);
         when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(false);
         when(parcelService.getLastParcelStatus(testParcel)).thenReturn(testLastStatus);
@@ -259,7 +245,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - ошибка получения информации")
     void updateParcelStatus_InfoError_ShouldReturnError() {
-
         TrackingInfo errorInfo = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
@@ -283,7 +268,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - ошибка с пустым сообщением")
     void updateParcelStatus_ErrorWithEmptyMessage_ShouldReturnDefaultError() {
-
         TrackingInfo errorInfo = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
@@ -307,7 +291,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("ParcelUpdateResult.error - должен создать результат с ошибкой")
     void parcelUpdateResult_Error_ShouldCreateErrorResult() {
-
         String errorMessage = "Test error message";
 
         ParcelUpdateService.ParcelUpdateResult result = ParcelUpdateService.ParcelUpdateResult.error(errorMessage);
@@ -350,7 +333,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - должен обновить lastChecked")
     void updateParcelStatus_ShouldUpdateLastChecked() {
-
         LocalDateTime beforeUpdate = LocalDateTime.now();
 
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
@@ -367,7 +349,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - должен обновить lastStatus и lastStatusDescription")
     void updateParcelStatus_ShouldUpdateLastStatusAndDescription() {
-
         TrackingInfo newInfo = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
@@ -402,7 +383,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - должен передать правильный maxAgeSeconds в кеш")
     void updateParcelStatus_ShouldPassCorrectMaxAgeSeconds() {
-
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(eq(TEST_TRACKING_NUMBER), eq(3600)))
                 .thenReturn(testTrackingInfo);
         when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(false);
@@ -416,7 +396,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - forceFresh = true должен игнорировать кеш")
     void updateParcelStatus_ForceFreshTrue_ShouldIgnoreCache() {
-
         when(trackingCacheService.getFreshTrackingInfo(TEST_TRACKING_NUMBER)).thenReturn(testTrackingInfo);
         when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(false);
         when(parcelService.getLastParcelStatus(testParcel)).thenReturn(testLastStatus);
@@ -434,7 +413,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - старый и новый статус null")
     void updateParcelStatus_BothOldAndNewStatusNull() {
-
         testUserParcel.setLastStatus(null);
 
         TrackingInfo infoWithNullStatus = TrackingInfo.builder()
@@ -462,11 +440,9 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - только hasNewStatuses = true без изменения статуса")
     void updateParcelStatus_OnlyHasNewStatusesTrue_WithoutStatusChange() {
-
         when(trackingCacheService.getTrackingInfoWithFreshnessCheck(TEST_TRACKING_NUMBER, 3600))
                 .thenReturn(testTrackingInfo);
-        when(parcelService.updateParcelStatus(testParcel, testTrackingInfo))
-                .thenReturn(true); // Добавлены новые записи в историю
+        when(parcelService.updateParcelStatus(testParcel, testTrackingInfo)).thenReturn(true);
         when(parcelService.getLastParcelStatus(testParcel)).thenReturn(testLastStatus);
 
         ParcelUpdateService.ParcelUpdateResult result = parcelUpdateService.updateParcelStatus(testUserParcel, false);
@@ -479,7 +455,6 @@ class ParcelUpdateServiceTest {
     @Test
     @DisplayName("updateParcelStatus - только statusChanged = true без новых записей")
     void updateParcelStatus_OnlyStatusChangedTrue_WithoutNewRecords() {
-
         TrackingInfo infoWithNewStatus = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")

@@ -14,11 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.otus.trackingbot.bot.keyboard.KeyboardFactory;
 import ru.otus.trackingbot.config.BotInfoConfig;
 import ru.otus.trackingbot.constant.BotConstants;
@@ -60,25 +56,26 @@ class TrackingBotTest {
     private static final Long CHAT_ID = 123456789L;
     private static final Integer MESSAGE_ID = 1;
     private static final String BOT_TOKEN = "test-token";
+    private static final String BOT_USERNAME = "testBot";
 
     private User testUser;
 
     @BeforeEach
-    void setUp() throws TelegramApiException {
-        // Создаем spy для бота
-        trackingBot = spy(new TrackingBot(BOT_TOKEN, true));
+    void setUp() {
+        // Создаем бота с отключенной регистрацией команд
+        TrackingBot originalBot = new TrackingBot(
+                BOT_TOKEN,
+                BOT_USERNAME,
+                true,
+                userService,
+                parcelService,
+                userParcelService,
+                trackingCacheService,
+                trackingServiceFactory,
+                keyboardFactory,
+                botInfoConfig);
 
-        // Устанавливаем botUsername через рефлексию
-        ReflectionTestUtils.setField(trackingBot, "botUsername", "testBot");
-
-        // Внедряем моки через рефлексию
-        ReflectionTestUtils.setField(trackingBot, "userService", userService);
-        ReflectionTestUtils.setField(trackingBot, "parcelService", parcelService);
-        ReflectionTestUtils.setField(trackingBot, "userParcelService", userParcelService);
-        ReflectionTestUtils.setField(trackingBot, "trackingCacheService", trackingCacheService);
-        ReflectionTestUtils.setField(trackingBot, "trackingServiceFactory", trackingServiceFactory);
-        ReflectionTestUtils.setField(trackingBot, "keyboardFactory", keyboardFactory);
-        ReflectionTestUtils.setField(trackingBot, "botInfoConfig", botInfoConfig);
+        trackingBot = spy(originalBot);
 
         testUser = User.builder()
                 .id(1L)
@@ -90,25 +87,20 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("/start - вызывает getOrCreateUser и getMainKeyboard")
-    void onStartCommand_callsGetOrCreateUserAndGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onStartCommand_callsGetOrCreateUserAndGetMainKeyboard() {
         Update update = createTextUpdate(BotConstants.CMD_START);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
 
         trackingBot.onUpdateReceived(update);
 
-        // getOrCreateUser вызывается 2 раза: в handleTextMessage и в getUser
         verify(userService, times(2)).getOrCreateUser(eq(CHAT_ID), any(), any(), any());
         verify(keyboardFactory).getMainKeyboard();
     }
 
     @Test
     @DisplayName("/menu - вызывает getMainKeyboard")
-    void onMenuCommand_callsGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onMenuCommand_callsGetMainKeyboard() {
         Update update = createTextUpdate(BotConstants.CMD_MENU);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
@@ -120,9 +112,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("/track - вызывает getCancelKeyboard")
-    void onTrackCommand_callsGetCancelKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onTrackCommand_callsGetCancelKeyboard() {
         Update update = createTextUpdate(BotConstants.CMD_TRACK);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getCancelKeyboard()).thenReturn(null);
@@ -134,14 +124,10 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("/list - когда есть посылки, вызывает getAllUserParcelsWithDetails и getParcelsKeyboard")
-    void onListCommand_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard()
-            throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onListCommand_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard() {
         Update update = createTextUpdate(BotConstants.CMD_LIST);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
 
-        // Создаем непустой список посылок
         List<UserParcel> userParcels = createUserParcelsList(2);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(userParcels);
         when(keyboardFactory.getParcelsKeyboard(anyList())).thenReturn(null);
@@ -150,15 +136,12 @@ class TrackingBotTest {
 
         verify(userParcelService).getAllUserParcelsWithDetails(testUser);
         verify(keyboardFactory).getParcelsKeyboard(anyList());
-        // Убеждаемся, что getMainKeyboard НЕ вызывался
         verify(keyboardFactory, never()).getMainKeyboard();
     }
 
     @Test
     @DisplayName("/list - когда нет посылок, вызывает getAllUserParcelsWithDetails и getMainKeyboard")
-    void onListCommand_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onListCommand_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard() {
         Update update = createTextUpdate(BotConstants.CMD_LIST);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(Collections.emptyList());
@@ -168,15 +151,12 @@ class TrackingBotTest {
 
         verify(userParcelService).getAllUserParcelsWithDetails(testUser);
         verify(keyboardFactory).getMainKeyboard();
-        // Убеждаемся, что getParcelsKeyboard НЕ вызывался
         verify(keyboardFactory, never()).getParcelsKeyboard(anyList());
     }
 
     @Test
     @DisplayName("/help - вызывает getSupport")
-    void onHelpCommand_callsGetSupport() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onHelpCommand_callsGetSupport() {
         Update update = createTextUpdate(BotConstants.CMD_HELP);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(botInfoConfig.getSupport()).thenReturn("@support");
@@ -190,9 +170,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Неизвестная команда - вызывает getMainKeyboard")
-    void onUnknownCommand_callsGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onUnknownCommand_callsGetMainKeyboard() {
         Update update = createTextUpdate("/unknown");
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
@@ -205,14 +183,10 @@ class TrackingBotTest {
     @Test
     @DisplayName(
             "Кнопка 'Мои посылки' - когда есть посылки, вызывает getAllUserParcelsWithDetails и getParcelsKeyboard")
-    void onMyParcelsButton_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard()
-            throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onMyParcelsButton_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard() {
         Update update = createTextUpdate(BotConstants.BTN_MY_PARCELS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
 
-        // Создаем НЕПУСТОЙ список посылок
         List<UserParcel> userParcels = createUserParcelsList(2);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(userParcels);
         when(keyboardFactory.getParcelsKeyboard(anyList())).thenReturn(null);
@@ -226,10 +200,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'Мои посылки' - когда нет посылок, вызывает getAllUserParcelsWithDetails и getMainKeyboard")
-    void onMyParcelsButton_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard()
-            throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onMyParcelsButton_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard() {
         Update update = createTextUpdate(BotConstants.BTN_MY_PARCELS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(Collections.emptyList());
@@ -244,9 +215,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'Отследить посылку' - вызывает getCancelKeyboard")
-    void onTrackParcelButton_callsGetCancelKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onTrackParcelButton_callsGetCancelKeyboard() {
         Update update = createTextUpdate(BotConstants.BTN_TRACK_PARCEL);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getCancelKeyboard()).thenReturn(null);
@@ -258,9 +227,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'Статистика' - вызывает getActiveUserParcels")
-    void onStatisticsButton_callsGetActiveUserParcels() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onStatisticsButton_callsGetActiveUserParcels() {
         Update update = createTextUpdate(BotConstants.BTN_STATISTICS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(userParcelService.getActiveUserParcels(testUser)).thenReturn(Collections.emptyList());
@@ -274,9 +241,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'Уведомления' - вызывает getNotificationsKeyboard")
-    void onNotificationsButton_callsGetNotificationsKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onNotificationsButton_callsGetNotificationsKeyboard() {
         Update update = createTextUpdate(BotConstants.BTN_NOTIFICATIONS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(keyboardFactory.getNotificationsKeyboard(true)).thenReturn(null);
@@ -288,9 +253,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'Помощь' - вызывает getSupport")
-    void onHelpButton_callsGetSupport() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onHelpButton_callsGetSupport() {
         Update update = createTextUpdate(BotConstants.BTN_HELP);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(botInfoConfig.getSupport()).thenReturn("@support");
@@ -304,9 +267,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Кнопка 'О боте' - вызывает методы BotInfoConfig")
-    void onAboutButton_callsBotInfoConfigMethods() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-
+    void onAboutButton_callsBotInfoConfigMethods() {
         Update update = createTextUpdate(BotConstants.BTN_ABOUT);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(botInfoConfig.getVersion()).thenReturn("1.0.0");
@@ -328,10 +289,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback back_to_menu - вызывает getMainKeyboard")
-    void onBackToMenuCallback_callsGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onBackToMenuCallback_callsGetMainKeyboard() {
         Update update = createCallbackUpdate(BotConstants.CALLBACK_BACK_TO_MENU);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
 
@@ -342,10 +300,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback notifications_on - вызывает toggleNotifications")
-    void onNotificationsOnCallback_callsToggleNotifications() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onNotificationsOnCallback_callsToggleNotifications() {
         Update update = createCallbackUpdate(BotConstants.CALLBACK_NOTIFICATIONS_ON);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
 
@@ -357,10 +312,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback notifications_off - вызывает toggleNotifications")
-    void onNotificationsOffCallback_callsToggleNotifications() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onNotificationsOffCallback_callsToggleNotifications() {
         Update update = createCallbackUpdate(BotConstants.CALLBACK_NOTIFICATIONS_OFF);
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
 
@@ -373,15 +325,10 @@ class TrackingBotTest {
     @Test
     @DisplayName(
             "Callback back_to_parcels - когда есть посылки, вызывает getAllUserParcelsWithDetails и getParcelsKeyboard")
-    void onBackToParcelsCallback_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard()
-            throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onBackToParcelsCallback_WhenParcelsExist_callsGetAllUserParcelsWithDetailsAndGetParcelsKeyboard() {
         Update update = createCallbackUpdate(BotConstants.CALLBACK_BACK_TO_PARCELS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
 
-        // Создаем НЕПУСТОЙ список посылок
         List<UserParcel> userParcels = createUserParcelsList(2);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(userParcels);
         when(keyboardFactory.getParcelsKeyboard(anyList())).thenReturn(null);
@@ -396,11 +343,7 @@ class TrackingBotTest {
     @Test
     @DisplayName(
             "Callback back_to_parcels - когда нет посылок, вызывает getAllUserParcelsWithDetails и getMainKeyboard")
-    void onBackToParcelsCallback_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard()
-            throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onBackToParcelsCallback_WhenNoParcels_callsGetAllUserParcelsWithDetailsAndGetMainKeyboard() {
         Update update = createCallbackUpdate(BotConstants.CALLBACK_BACK_TO_PARCELS);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
         when(userParcelService.getAllUserParcelsWithDetails(testUser)).thenReturn(Collections.emptyList());
@@ -415,10 +358,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback parcel_stop - вызывает stopParcelTracking и показывает обновленное меню")
-    void onParcelStopCallback_callsStopParcelTrackingAndShowsMenu() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onParcelStopCallback_callsStopParcelTrackingAndShowsMenu() {
         Long parcelId = 123L;
         Update update = createCallbackUpdate(BotConstants.PREFIX_PARCEL_STOP + "_" + parcelId);
 
@@ -437,10 +377,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback parcel_resume - вызывает resumeParcelTracking и показывает обновленное меню")
-    void onParcelResumeCallback_callsResumeParcelTrackingAndShowsMenu() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onParcelResumeCallback_callsResumeParcelTrackingAndShowsMenu() {
         Long parcelId = 123L;
         Update update = createCallbackUpdate(BotConstants.PREFIX_PARCEL_RESUME + "_" + parcelId);
 
@@ -458,10 +395,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback parcel_delete - вызывает deleteParcel и показывает подтверждение")
-    void onParcelDeleteCallback_callsDeleteParcelAndShowsConfirmation() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onParcelDeleteCallback_callsDeleteParcelAndShowsConfirmation() {
         Long parcelId = 123L;
         Update update = createCallbackUpdate(BotConstants.PREFIX_PARCEL_DELETE + "_" + parcelId);
 
@@ -478,10 +412,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback parcel_delete_confirm - вызывает confirmDeleteParcel")
-    void onParcelDeleteConfirmCallback_callsConfirmDeleteParcel() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onParcelDeleteConfirmCallback_callsConfirmDeleteParcel() {
         Long parcelId = 123L;
         Update update = createCallbackUpdate(BotConstants.PREFIX_PARCEL_DELETE_CONFIRM + "_" + parcelId);
 
@@ -499,10 +430,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback с действием parcel_info_123 - вызывает findByIdWithDetails")
-    void onParcelInfoCallback_callsFindByIdWithDetails() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onParcelInfoCallback_callsFindByIdWithDetails() {
         Long parcelId = 123L;
         Update update = createCallbackUpdate(BotConstants.PREFIX_PARCEL_INFO + "_" + parcelId);
         when(userService.getOrCreateUser(eq(CHAT_ID), any(), any(), any())).thenReturn(testUser);
@@ -515,10 +443,7 @@ class TrackingBotTest {
 
     @Test
     @DisplayName("Callback с некорректным ID - вызывает getMainKeyboard (обработка ошибки)")
-    void onCallbackWithInvalidId_callsGetMainKeyboard() throws TelegramApiException {
-        doReturn(null).when(trackingBot).execute(any(SendMessage.class));
-        doReturn(null).when(trackingBot).execute(any(DeleteMessage.class));
-
+    void onCallbackWithInvalidId_callsGetMainKeyboard() {
         Update update = createCallbackUpdate("parcel_info_invalid");
         when(keyboardFactory.getMainKeyboard()).thenReturn(null);
 
@@ -530,7 +455,6 @@ class TrackingBotTest {
     @Test
     @DisplayName("Обновление без сообщения - нет вызовов")
     void onUpdateWithoutMessage_hasNoInteractions() {
-
         Update update = new Update();
 
         trackingBot.onUpdateReceived(update);
@@ -541,7 +465,6 @@ class TrackingBotTest {
     @Test
     @DisplayName("Обновление с пустым сообщением - нет вызовов")
     void onUpdateWithEmptyMessage_hasNoInteractions() {
-
         Update update = new Update();
         Message message = new Message();
         update.setMessage(message);
@@ -589,7 +512,6 @@ class TrackingBotTest {
 
     private UserParcel createUserParcel(Long id, boolean isActive) {
         Parcel parcel = Parcel.builder()
-                .id(id)
                 .trackingNumber("TRACK" + id)
                 .serviceName("Почта России")
                 .build();
@@ -608,7 +530,6 @@ class TrackingBotTest {
         List<UserParcel> parcels = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
             Parcel parcel = Parcel.builder()
-                    .id((long) i)
                     .trackingNumber("TRACK" + i)
                     .serviceName("Почта России")
                     .build();

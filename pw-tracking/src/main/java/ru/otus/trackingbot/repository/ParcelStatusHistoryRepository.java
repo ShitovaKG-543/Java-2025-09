@@ -28,7 +28,30 @@ public interface ParcelStatusHistoryRepository extends JpaRepository<ParcelStatu
      * @param parcel посылка
      * @return список статусов в порядке убывания даты
      */
-    List<ParcelStatusHistory> findByParcelOrderByOperationDateDesc(Parcel parcel);
+    default List<ParcelStatusHistory> findByParcelOrderByOperationDateDesc(Parcel parcel) {
+        return findByParcelTrackingNumberOrderByOperationDateDesc(parcel.getTrackingNumber());
+    }
+
+    /**
+     * Возвращает историю статусов по трек-номеру.
+     *
+     * @param trackingNumber трек-номер посылки
+     * @return список статусов в порядке убывания даты
+     */
+    @Query("SELECT psh FROM ParcelStatusHistory psh " + "JOIN FETCH psh.parcel "
+            + "WHERE psh.parcel.trackingNumber = :trackingNumber "
+            + "ORDER BY psh.operationDate DESC")
+    List<ParcelStatusHistory> findByParcelTrackingNumberOrderByOperationDateDesc(
+            @Param("trackingNumber") String trackingNumber);
+
+    /**
+     * Возвращает последний (самый новый) статус по трек-номеру.
+     * Spring Data JPA автоматически добавит LIMIT 1.
+     *
+     * @param trackingNumber трек-номер посылки
+     * @return Optional с последним статусом
+     */
+    Optional<ParcelStatusHistory> findFirstByParcelTrackingNumberOrderByOperationDateDesc(String trackingNumber);
 
     /**
      * Возвращает последний (самый новый) статус для указанной посылки.
@@ -36,7 +59,9 @@ public interface ParcelStatusHistoryRepository extends JpaRepository<ParcelStatu
      * @param parcel посылка
      * @return Optional с последним статусом
      */
-    Optional<ParcelStatusHistory> findFirstByParcelOrderByOperationDateDesc(Parcel parcel);
+    default Optional<ParcelStatusHistory> findFirstByParcelOrderByOperationDateDesc(Parcel parcel) {
+        return findFirstByParcelTrackingNumberOrderByOperationDateDesc(parcel.getTrackingNumber());
+    }
 
     /**
      * Сбрасывает флаг isCurrent для всех статусов указанной посылки.
@@ -44,10 +69,19 @@ public interface ParcelStatusHistoryRepository extends JpaRepository<ParcelStatu
      *
      * @param parcel посылка
      */
+    default void resetCurrentStatus(Parcel parcel) {
+        resetCurrentStatusByTrackingNumber(parcel.getTrackingNumber());
+    }
+
+    /**
+     * Сбрасывает флаг isCurrent для всех статусов по трек-номеру.
+     *
+     * @param trackingNumber трек-номер посылки
+     */
     @Modifying
     @Transactional
-    @Query("UPDATE ParcelStatusHistory psh SET psh.isCurrent = false WHERE psh.parcel = :parcel")
-    void resetCurrentStatus(@Param("parcel") Parcel parcel);
+    @Query("UPDATE ParcelStatusHistory psh SET psh.isCurrent = false WHERE psh.parcel.trackingNumber = :trackingNumber")
+    void resetCurrentStatusByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 
     /**
      * Проверяет, существует ли статус с указанным кодом для посылки.
@@ -56,5 +90,19 @@ public interface ParcelStatusHistoryRepository extends JpaRepository<ParcelStatu
      * @param statusCode код статуса
      * @return true если статус существует
      */
-    boolean existsByParcelAndStatusCode(Parcel parcel, String statusCode);
+    default boolean existsByParcelAndStatusCode(Parcel parcel, String statusCode) {
+        return existsByParcelTrackingNumberAndStatusCode(parcel.getTrackingNumber(), statusCode);
+    }
+
+    /**
+     * Проверяет, существует ли статус по трек-номеру и коду.
+     *
+     * @param trackingNumber трек-номер посылки
+     * @param statusCode код статуса
+     * @return true если статус существует
+     */
+    @Query("SELECT CASE WHEN COUNT(psh) > 0 THEN true ELSE false END FROM ParcelStatusHistory psh "
+            + "WHERE psh.parcel.trackingNumber = :trackingNumber AND psh.statusCode = :statusCode")
+    boolean existsByParcelTrackingNumberAndStatusCode(
+            @Param("trackingNumber") String trackingNumber, @Param("statusCode") String statusCode);
 }

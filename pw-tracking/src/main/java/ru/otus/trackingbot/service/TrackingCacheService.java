@@ -2,6 +2,7 @@ package ru.otus.trackingbot.service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,20 +15,8 @@ import ru.otus.trackingbot.model.TrackingInfo;
 import ru.otus.trackingbot.service.impl.RussianPostTrackingService;
 
 /**
- * Сервис кеширования информации об отслеживании посылок.
- * <p>
- * Обеспечивает кеширование результатов запросов к API отслеживания
- * для снижения нагрузки на внешние сервисы и ускорения ответов бота.
- * </p>
- *
- * <p><b>Особенности:</b></p>
- * <ul>
- *     <li>Использует Spring Cache с реализацией Caffeine</li>
- *     <li>Поддерживает проверку актуальности кеша по времени</li>
- *     <li>Позволяет принудительно обновлять кеш</li>
- *     <li>Предоставляет методы для получения статистики кеша</li>
- *     <li>Поддерживает ручное обновление кеша при изменении данных в БД</li>
- * </ul>
+ * Cache service for parcel tracking information.
+ * Reduces API calls and improves response time.
  */
 @Service
 @Slf4j
@@ -43,210 +32,237 @@ public class TrackingCacheService {
     private long ttlSeconds;
 
     /**
-     * Получает информацию о посылке с кешированием.
-     * <p>
-     * При первом запросе вызывает API и сохраняет результат в кеш.
-     * Последующие запросы в течение TTL возвращают данные из кеша.
-     * </p>
+     * Gets tracking info with caching.
+     * First call hits API, subsequent calls return cached data within TTL.
      *
-     * @param trackingNumber трек-номер посылки
-     * @return информация об отслеживании
+     * @param trackingNumber parcel tracking number
+     * @return tracking information
      */
     @Cacheable(value = "trackingInfo", key = "#trackingNumber", unless = "#result == null || !#result.success")
     public TrackingInfo getTrackingInfo(String trackingNumber) {
-        log.info("🔴 CACHE MISS - Вызов API для {}", trackingNumber);
+        log.info("🔴 CACHE MISS - Calling API for {}", trackingNumber);
         TrackingInfo info = trackingService.trackParcel(trackingNumber);
         if (info.isSuccess()) {
-            log.info("✅ Результат сохранен в кеш для {}", trackingNumber);
+            log.info("✅ Result cached for {}", trackingNumber);
         }
         return info;
     }
 
     /**
-     * Выполняет прямой запрос к API без использования кеша.
+     * Gets fresh tracking info with cache freshness check.
+     * Returns cached data if fresh, otherwise fetches from API.
      *
-     * @param trackingNumber трек-номер посылки
-     * @return информация об отслеживании
-     */
-    private TrackingInfo fetchFromApi(String trackingNumber) {
-        log.info("🌐 Прямой вызов API для {}", trackingNumber);
-        return trackingService.trackParcel(trackingNumber);
-    }
-
-    /**
-     * Обновляет кеш для указанной посылки свежими данными из API.
-     * Используется после обновления статуса через API.
-     *
-     * @param trackingNumber трек-номер посылки
-     * @return свежая информация об отслеживании
-     */
-    public TrackingInfo refreshCache(String trackingNumber) {
-        log.info("🔄 Принудительное обновление кеша для {}", trackingNumber);
-        evictCache(trackingNumber);
-        TrackingInfo info = fetchFromApi(trackingNumber);
-        if (info.isSuccess()) {
-            updateCache(trackingNumber, info);
-        }
-        return info;
-    }
-
-    /**
-     * Обновляет кеш из данных TrackingInfo (без вызова API).
-     * Используется когда данные уже получены из API и сохранены в БД.
-     *
-     * @param trackingNumber трек-номер
-     * @param info информация для сохранения в кеш
-     */
-    public void updateCache(String trackingNumber, TrackingInfo info) {
-        Cache cache = cacheManager.getCache("trackingInfo");
-        if (cache != null && info != null && info.isSuccess()) {
-            cache.put(trackingNumber, info);
-            log.info("✅ Кеш обновлен для {} из полученных данных", trackingNumber);
-        } else if (cache == null) {
-            log.warn("Кеш trackingInfo не найден, невозможно обновить данные для {}", trackingNumber);
-        } else if (info == null || !info.isSuccess()) {
-            log.debug("Не удалось обновить кеш для {}: информация об ошибке", trackingNumber);
-        }
-    }
-
-    /**
-     * Получает информацию о посылке с проверкой актуальности кеша.
-     * <p>
-     * Если данные в кеше актуальны (возраст меньше maxAgeSeconds) -
-     * возвращает из кеша. Если кеш устарел или отсутствует -
-     * выполняет запрос к API.
-     * </p>
-     *
-     * @param trackingNumber трек-номер посылки
-     * @param maxAgeSeconds максимальный возраст кеша в секундах
-     * @return актуальная информация об отслеживании
+     * @param trackingNumber parcel tracking number
+     * @param maxAgeSeconds maximum age of cached data in seconds
+     * @return up-to-date tracking information
      */
     public TrackingInfo getTrackingInfoWithFreshnessCheck(String trackingNumber, int maxAgeSeconds) {
-        Cache cache = cacheManager.getCache("trackingInfo");
+        Optional<TrackingInfo> cachedInfo = getCachedInfo(trackingNumber);
 
-        if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(trackingNumber);
-            if (wrapper != null) {
-                TrackingInfo cachedInfo = (TrackingInfo) wrapper.get();
-                if (cachedInfo != null && cachedInfo.isSuccess()) {
-                    LocalDateTime lastCheck = cachedInfo.getLastCheck();
-                    if (lastCheck != null) {
-                        long ageSeconds = ChronoUnit.SECONDS.between(lastCheck, LocalDateTime.now());
-                        if (ageSeconds < maxAgeSeconds) {
-                            log.info(
-                                    "🟢 CACHE HIT - Данные из кеша для {} (возраст: {} сек)",
-                                    trackingNumber,
-                                    ageSeconds);
-                            return cachedInfo;
-                        } else {
-                            log.info(
-                                    "🟡 CACHE STALE - Кеш устарел для {} (возраст: {} сек, лимит: {} сек)",
-                                    trackingNumber,
-                                    ageSeconds,
-                                    maxAgeSeconds);
-                        }
-                    }
-                }
-            }
+        if (cachedInfo.isPresent() && isCacheFresh(cachedInfo.get(), trackingNumber, maxAgeSeconds)) {
+            return cachedInfo.get();
         }
 
-        // Кеш отсутствует или устарел - делаем запрос к API
-        log.info("🔴 CACHE MISS or STALE - Вызов API для {}", trackingNumber);
-        TrackingInfo info = fetchFromApi(trackingNumber);
-        if (info.isSuccess()) {
-            updateCache(trackingNumber, info);
-        }
-        return info;
+        return fetchAndCache(trackingNumber);
     }
 
     /**
-     * Очищает кеш для конкретной посылки.
+     * Gets cached tracking info if present.
      *
-     * @param trackingNumber трек-номер посылки
+     * @param trackingNumber parcel tracking number
+     * @return Optional with cached TrackingInfo
      */
-    @CacheEvict(value = "trackingInfo", key = "#trackingNumber")
-    public void evictCache(String trackingNumber) {
-        log.debug("🗑 Кеш очищен для {}", trackingNumber);
+    public Optional<TrackingInfo> getCachedInfo(String trackingNumber) {
+        Cache cache = getCache();
+        if (cache == null) {
+            return Optional.empty();
+        }
+
+        Cache.ValueWrapper wrapper = cache.get(trackingNumber);
+        if (wrapper == null) {
+            return Optional.empty();
+        }
+
+        TrackingInfo info = (TrackingInfo) wrapper.get();
+        if (info == null || !info.isSuccess()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(info);
     }
 
     /**
-     * Получает актуальную информацию, игнорируя кеш.
-     * <p>
-     * Принудительно очищает кеш для указанной посылки
-     * и выполняет запрос к API.
-     * </p>
-     *
-     * @param trackingNumber трек-номер посылки
-     * @return свежая информация об отслеживании
+     * Checks if cached data is still fresh.
      */
-    public TrackingInfo getFreshTrackingInfo(String trackingNumber) {
-        log.info("🔄 Принудительное обновление для {}", trackingNumber);
-        evictCache(trackingNumber);
-        TrackingInfo info = fetchFromApi(trackingNumber);
-        if (info.isSuccess()) {
-            updateCache(trackingNumber, info);
-        }
-        return info;
-    }
+    private boolean isCacheFresh(TrackingInfo cachedInfo, String trackingNumber, int maxAgeSeconds) {
+        Optional<Long> age = getCacheAge(trackingNumber);
 
-    /**
-     * Возвращает возраст кеша в секундах.
-     *
-     * @param trackingNumber трек-номер посылки
-     * @return возраст кеша в секундах или null, если кеш отсутствует
-     */
-    public Long getCacheAge(String trackingNumber) {
-        Cache cache = cacheManager.getCache("trackingInfo");
-        if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(trackingNumber);
-            if (wrapper != null) {
-                TrackingInfo cachedInfo = (TrackingInfo) wrapper.get();
-                if (cachedInfo != null && cachedInfo.getLastCheck() != null) {
-                    return ChronoUnit.SECONDS.between(cachedInfo.getLastCheck(), LocalDateTime.now());
-                }
-            }
+        if (age.isEmpty()) {
+            log.info("🟡 CACHE STALE - No valid timestamp for {}", trackingNumber);
+            return false;
         }
-        return null;
-    }
 
-    /**
-     * Проверяет, есть ли информация о посылке в кеше.
-     *
-     * @param trackingNumber трек-номер посылки
-     * @return true если данные есть в кеше
-     */
-    public boolean isInCache(String trackingNumber) {
-        Cache cache = cacheManager.getCache("trackingInfo");
-        if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(trackingNumber);
-            if (wrapper != null) {
-                TrackingInfo cachedInfo = (TrackingInfo) wrapper.get();
-                return cachedInfo != null && cachedInfo.isSuccess();
-            }
+        long ageSeconds = age.get();
+
+        if (ageSeconds < maxAgeSeconds) {
+            log.info("🟢 CACHE HIT - Data from cache for {} (age: {} sec)", trackingNumber, ageSeconds);
+            return true;
         }
+
+        log.info(
+                "🟡 CACHE STALE - Cache expired for {} (age: {} sec, limit: {} sec)",
+                trackingNumber,
+                ageSeconds,
+                maxAgeSeconds);
         return false;
     }
 
     /**
-     * Выводит статистику кеша в лог.
-     * Полезно для отладки и мониторинга.
+     * Returns cache age in seconds.
+     *
+     * @param trackingNumber parcel tracking number
+     * @return Optional with age in seconds, or empty if not cached
+     */
+    public Optional<Long> getCacheAge(String trackingNumber) {
+        Optional<TrackingInfo> cachedInfo = getCachedInfo(trackingNumber);
+
+        if (cachedInfo.isEmpty()) {
+            return Optional.empty();
+        }
+
+        LocalDateTime lastCheck = cachedInfo.get().getLastCheck();
+        if (lastCheck == null) {
+            return Optional.empty();
+        }
+
+        long ageSeconds = ChronoUnit.SECONDS.between(lastCheck, LocalDateTime.now());
+        return Optional.of(ageSeconds);
+    }
+
+    /**
+     * Gets cache instance.
+     */
+    private Cache getCache() {
+        Cache cache = cacheManager.getCache("trackingInfo");
+        if (cache == null) {
+            log.warn("Cache 'trackingInfo' not found");
+        }
+        return cache;
+    }
+
+    /**
+     * Fetches fresh data from API and updates cache.
+     */
+    private TrackingInfo fetchAndCache(String trackingNumber) {
+        log.info("🌐 Fetching fresh data from API for {}", trackingNumber);
+        TrackingInfo info = trackingService.trackParcel(trackingNumber);
+        if (info.isSuccess()) {
+            updateCache(trackingNumber, info);
+        }
+        return info;
+    }
+
+    /**
+     * Fetches data directly from API without cache.
+     */
+    private TrackingInfo fetchFromApi(String trackingNumber) {
+        log.info("🌐 Direct API call for {}", trackingNumber);
+        return trackingService.trackParcel(trackingNumber);
+    }
+
+    /**
+     * Forces cache refresh for a parcel.
+     *
+     * @param trackingNumber parcel tracking number
+     * @return fresh tracking information
+     */
+    public TrackingInfo refreshCache(String trackingNumber) {
+        log.info("🔄 Force refreshing cache for {}", trackingNumber);
+        evictCache(trackingNumber);
+        TrackingInfo info = fetchFromApi(trackingNumber);
+        if (info.isSuccess()) {
+            updateCache(trackingNumber, info);
+        }
+        return info;
+    }
+
+    /**
+     * Updates cache with provided tracking info.
+     *
+     * @param trackingNumber parcel tracking number
+     * @param info tracking info to cache
+     */
+    public void updateCache(String trackingNumber, TrackingInfo info) {
+        Cache cache = getCache();
+        if (cache == null) {
+            log.warn("Cannot update cache - cache not found for {}", trackingNumber);
+            return;
+        }
+
+        if (info == null || !info.isSuccess()) {
+            log.debug("Cannot update cache - invalid info for {}", trackingNumber);
+            return;
+        }
+
+        cache.put(trackingNumber, info);
+        log.info("✅ Cache updated for {} from provided data", trackingNumber);
+    }
+
+    /**
+     * Evicts cache entry for a parcel.
+     *
+     * @param trackingNumber parcel tracking number
+     */
+    @CacheEvict(value = "trackingInfo", key = "#trackingNumber")
+    public void evictCache(String trackingNumber) {
+        log.debug("🗑 Cache evicted for {}", trackingNumber);
+    }
+
+    /**
+     * Gets fresh tracking info ignoring cache.
+     *
+     * @param trackingNumber parcel tracking number
+     * @return fresh tracking information
+     */
+    public TrackingInfo getFreshTrackingInfo(String trackingNumber) {
+        log.info("🔄 Getting fresh data for {}", trackingNumber);
+        evictCache(trackingNumber);
+        TrackingInfo info = fetchFromApi(trackingNumber);
+        if (info.isSuccess()) {
+            updateCache(trackingNumber, info);
+        }
+        return info;
+    }
+
+    /**
+     * Checks if tracking info exists in cache.
+     *
+     * @param trackingNumber parcel tracking number
+     * @return true if cached and valid
+     */
+    public boolean isInCache(String trackingNumber) {
+        return getCachedInfo(trackingNumber).isPresent();
+    }
+
+    /**
+     * Logs cache statistics for monitoring.
      */
     public void logCacheStats() {
-        Cache cache = cacheManager.getCache("trackingInfo");
-        if (cache != null) {
-            log.info("📊 Статистика кеша trackingInfo:");
-            log.info("   - Имя кеша: {}", cache.getName());
+        Cache cache = getCache();
+        if (cache == null) {
+            log.warn("Cache 'trackingInfo' not found!");
+            return;
+        }
 
-            // Пытаемся получить нативную статистику Caffeine
-            Object nativeCache = cache.getNativeCache();
-            if (nativeCache instanceof com.github.benmanes.caffeine.cache.Cache) {
-                com.github.benmanes.caffeine.cache.Cache<?, ?> caffeineCache =
-                        (com.github.benmanes.caffeine.cache.Cache<?, ?>) nativeCache;
-                log.info("   - Размер кеша: {}", caffeineCache.estimatedSize());
-                log.info("   - Статистика: {}", caffeineCache.stats());
-            }
-        } else {
-            log.warn("Кеш trackingInfo не найден!");
+        log.info("📊 Cache statistics for 'trackingInfo':");
+        log.info("   - Cache name: {}", cache.getName());
+
+        Object nativeCache = cache.getNativeCache();
+        if (nativeCache instanceof com.github.benmanes.caffeine.cache.Cache) {
+            com.github.benmanes.caffeine.cache.Cache<?, ?> caffeineCache =
+                    (com.github.benmanes.caffeine.cache.Cache<?, ?>) nativeCache;
+            log.info("   - Estimated size: {}", caffeineCache.estimatedSize());
+            log.info("   - Stats: {}", caffeineCache.stats());
         }
     }
 }

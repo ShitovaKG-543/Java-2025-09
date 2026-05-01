@@ -62,7 +62,11 @@ public interface UserParcelRepository extends JpaRepository<UserParcel, Long> {
      * @param trackingNumber трек-номер посылки
      * @return Optional со связью или пустой Optional
      */
-    Optional<UserParcel> findByUserAndParcelTrackingNumber(User user, String trackingNumber);
+    @Query("SELECT up FROM UserParcel up " + "JOIN FETCH up.user "
+            + "JOIN FETCH up.parcel "
+            + "WHERE up.user = :user AND up.parcel.trackingNumber = :trackingNumber")
+    Optional<UserParcel> findByUserAndParcelTrackingNumber(
+            @Param("user") User user, @Param("trackingNumber") String trackingNumber);
 
     /**
      * Деактивирует отслеживание посылки для пользователя.
@@ -90,9 +94,27 @@ public interface UserParcelRepository extends JpaRepository<UserParcel, Long> {
             + "WHERE up.id = :id AND up.user = :user")
     Optional<UserParcel> findByIdWithDetails(@Param("id") Long id, @Param("user") User user);
 
+    /**
+     * Возвращает все посылки пользователя (активные и неактивные) с подгрузкой связей.
+     *
+     * @param user пользователь
+     * @return список всех посылок пользователя
+     */
     @Query("SELECT up FROM UserParcel up " + "JOIN FETCH up.user "
             + "JOIN FETCH up.parcel "
             + "WHERE up.user = :user "
             + "ORDER BY up.isActive DESC, up.addedAt DESC")
     List<UserParcel> findAllByUserWithDetails(@Param("user") User user);
+
+    /**
+     * Возвращает все неактивные посылки пользователя с подгрузкой связей.
+     *
+     * @param user пользователь
+     * @return список неактивных посылок пользователя
+     */
+    @Query("SELECT up FROM UserParcel up " + "JOIN FETCH up.user "
+            + "JOIN FETCH up.parcel "
+            + "WHERE up.user = :user AND up.isActive = false "
+            + "ORDER BY up.addedAt DESC")
+    List<UserParcel> findByUserAndIsActiveFalseWithDetails(@Param("user") User user);
 }

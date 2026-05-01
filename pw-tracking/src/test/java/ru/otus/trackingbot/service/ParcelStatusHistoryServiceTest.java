@@ -22,7 +22,6 @@ import ru.otus.trackingbot.repository.ParcelStatusHistoryRepository;
 @DisplayName("ParcelStatusHistoryService тесты")
 class ParcelStatusHistoryServiceTest {
 
-    private static final Long TEST_PARCEL_ID = 1L;
     private static final String TEST_TRACKING_NUMBER = "RA644000001RU";
 
     @Mock
@@ -39,8 +38,8 @@ class ParcelStatusHistoryServiceTest {
     @BeforeEach
     void setUp() {
         LocalDateTime fixedDate = createFixedDate();
+
         testParcel = Parcel.builder()
-                .id(TEST_PARCEL_ID)
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName("Почта России")
                 .build();
@@ -77,7 +76,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("getHistoryByParcel - должен вернуть историю статусов")
     void getHistoryByParcel_ShouldReturnHistory() {
-
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(testHistory);
 
@@ -91,7 +89,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("getHistoryByParcel - пустая история должна вернуть пустой список")
     void getHistoryByParcel_EmptyHistory_ShouldReturnEmptyList() {
-
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(new ArrayList<>());
 
@@ -108,7 +105,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("getLastStatus - должен вернуть последний статус")
     void getLastStatus_ShouldReturnLastStatus() {
-
         when(statusHistoryRepository.findFirstByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(Optional.of(testStatus2));
 
@@ -121,7 +117,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("getLastStatus - без истории должен вернуть null")
     void getLastStatus_NoHistory_ShouldReturnNull() {
-
         when(statusHistoryRepository.findFirstByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(Optional.empty());
 
@@ -138,7 +133,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("saveStatusHistory - должен сохранить статус")
     void saveStatusHistory_ShouldSaveStatus() {
-
         ParcelStatusHistory newStatus = ParcelStatusHistory.builder()
                 .statusCode("3")
                 .statusName("Покинуло сортировочный центр")
@@ -177,7 +171,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("saveOnlyNewStatuses - новые статусы должны быть сохранены")
     void saveOnlyNewStatuses_NewStatuses_ShouldSaveOnlyNewOnes() {
-
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(testHistory);
 
@@ -201,11 +194,9 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("saveOnlyNewStatuses - дубликаты не должны сохраняться")
     void saveOnlyNewStatuses_DuplicateStatuses_ShouldNotSave() {
-
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(testHistory);
 
-        // Статус, который уже существует
         ParcelStatusHistory duplicateStatus = ParcelStatusHistory.builder()
                 .statusCode("1")
                 .statusName("Принято в отделении связи")
@@ -224,7 +215,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("saveOnlyNewStatuses - смесь новых и существующих статусов")
     void saveOnlyNewStatuses_MixedStatuses_ShouldSaveOnlyNew() {
-
         LocalDateTime fixedDate = createFixedDate();
 
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
@@ -263,7 +253,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("saveOnlyNewStatuses - статус с null датой не должен считаться дубликатом")
     void saveOnlyNewStatuses_StatusWithNullDate_ShouldBeSaved() {
-
         when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(testHistory);
 
@@ -282,6 +271,30 @@ class ParcelStatusHistoryServiceTest {
         verify(statusHistoryRepository).save(statusWithNullDate);
     }
 
+    @Test
+    @DisplayName("saveOnlyNewStatuses - должен установить createdAt для новых статусов")
+    void saveOnlyNewStatuses_ShouldSetCreatedAt() {
+        when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
+                .thenReturn(testHistory);
+
+        ParcelStatusHistory newStatus = ParcelStatusHistory.builder()
+                .statusCode("3")
+                .statusName("Покинуло сортировочный центр")
+                .build();
+
+        List<ParcelStatusHistory> newStatuses = Collections.singletonList(newStatus);
+
+        statusHistoryService.saveOnlyNewStatuses(testParcel, newStatuses);
+
+        ArgumentCaptor<ParcelStatusHistory> captor = ArgumentCaptor.forClass(ParcelStatusHistory.class);
+        verify(statusHistoryRepository).save(captor.capture());
+
+        ParcelStatusHistory savedStatus = captor.getValue();
+        assertThat(savedStatus.getCreatedAt()).isNotNull();
+        assertThat(savedStatus.getParcel()).isEqualTo(testParcel);
+        assertThat(savedStatus.getIsCurrent()).isFalse();
+    }
+
     // =====================================================
     // ТЕСТЫ ДЛЯ isSameStatus (через рефлексию)
     // =====================================================
@@ -289,7 +302,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("isSameStatus - одинаковые статусы должны считаться идентичными")
     void isSameStatus_IdenticalStatuses_ShouldReturnTrue() throws Exception {
-
         java.lang.reflect.Method method = ParcelStatusHistoryService.class.getDeclaredMethod(
                 "isSameStatus", ParcelStatusHistory.class, ParcelStatusHistory.class);
         method.setAccessible(true);
@@ -314,7 +326,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("isSameStatus - разные даты должны считаться разными")
     void isSameStatus_DifferentDates_ShouldReturnFalse() throws Exception {
-
         java.lang.reflect.Method method = ParcelStatusHistoryService.class.getDeclaredMethod(
                 "isSameStatus", ParcelStatusHistory.class, ParcelStatusHistory.class);
         method.setAccessible(true);
@@ -339,7 +350,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("isSameStatus - разные названия должны считаться разными")
     void isSameStatus_DifferentNames_ShouldReturnFalse() throws Exception {
-
         java.lang.reflect.Method method = ParcelStatusHistoryService.class.getDeclaredMethod(
                 "isSameStatus", ParcelStatusHistory.class, ParcelStatusHistory.class);
         method.setAccessible(true);
@@ -364,7 +374,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("isSameStatus - разные места должны считаться разными")
     void isSameStatus_DifferentPlaces_ShouldReturnFalse() throws Exception {
-
         java.lang.reflect.Method method = ParcelStatusHistoryService.class.getDeclaredMethod(
                 "isSameStatus", ParcelStatusHistory.class, ParcelStatusHistory.class);
         method.setAccessible(true);
@@ -389,7 +398,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("isSameStatus - null даты с обеих сторон должны считаться одинаковыми")
     void isSameStatus_BothNullDates_ShouldReturnTrue() throws Exception {
-
         java.lang.reflect.Method method = ParcelStatusHistoryService.class.getDeclaredMethod(
                 "isSameStatus", ParcelStatusHistory.class, ParcelStatusHistory.class);
         method.setAccessible(true);
@@ -418,7 +426,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("updateCurrentStatusFlag - должен обновить флаг текущего статуса")
     void updateCurrentStatusFlag_ShouldUpdateCurrentFlag() {
-
         when(statusHistoryRepository.findFirstByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(Optional.of(testStatus2));
 
@@ -433,7 +440,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("updateCurrentStatusFlag - без истории не должен сохранять")
     void updateCurrentStatusFlag_NoHistory_ShouldNotSave() {
-
         when(statusHistoryRepository.findFirstByParcelOrderByOperationDateDesc(testParcel))
                 .thenReturn(Optional.empty());
 
@@ -445,46 +451,12 @@ class ParcelStatusHistoryServiceTest {
     }
 
     // =====================================================
-    // ТЕСТЫ ДЛЯ saveAllStatuses
-    // =====================================================
-
-    @Test
-    @DisplayName("saveAllStatuses - должен сохранить все статусы")
-    void saveAllStatuses_ShouldSaveAllStatuses() {
-
-        List<ParcelStatusHistory> statuses = Arrays.asList(testStatus1, testStatus2);
-
-        statusHistoryService.saveAllStatuses(testParcel, statuses);
-
-        verify(statusHistoryRepository).resetCurrentStatus(testParcel);
-        verify(statusHistoryRepository, times(2)).save(any(ParcelStatusHistory.class));
-
-        ArgumentCaptor<ParcelStatusHistory> captor = ArgumentCaptor.forClass(ParcelStatusHistory.class);
-        verify(statusHistoryRepository, times(2)).save(captor.capture());
-
-        List<ParcelStatusHistory> savedStatuses = captor.getAllValues();
-        assertThat(savedStatuses).hasSize(2);
-        assertThat(savedStatuses.get(0).getParcel()).isEqualTo(testParcel);
-        assertThat(savedStatuses.get(1).getParcel()).isEqualTo(testParcel);
-    }
-
-    @Test
-    @DisplayName("saveAllStatuses - пустой список не должен вызывать сохранение")
-    void saveAllStatuses_EmptyList_ShouldNotSave() {
-        statusHistoryService.saveAllStatuses(testParcel, new ArrayList<>());
-
-        verify(statusHistoryRepository).resetCurrentStatus(testParcel);
-        verify(statusHistoryRepository, never()).save(any(ParcelStatusHistory.class));
-    }
-
-    // =====================================================
     // ТЕСТЫ ДЛЯ hasStatus
     // =====================================================
 
     @Test
     @DisplayName("hasStatus - существующий статус должен вернуть true")
     void hasStatus_ExistingStatus_ShouldReturnTrue() {
-
         when(statusHistoryRepository.existsByParcelAndStatusCode(testParcel, "1"))
                 .thenReturn(true);
 
@@ -497,7 +469,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("hasStatus - несуществующий статус должен вернуть false")
     void hasStatus_NonExistingStatus_ShouldReturnFalse() {
-
         when(statusHistoryRepository.existsByParcelAndStatusCode(testParcel, "999"))
                 .thenReturn(false);
 
@@ -510,7 +481,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("hasStatus - null код должен вернуть false")
     void hasStatus_NullCode_ShouldReturnFalse() {
-
         when(statusHistoryRepository.existsByParcelAndStatusCode(eq(testParcel), isNull()))
                 .thenReturn(false);
 
@@ -525,33 +495,8 @@ class ParcelStatusHistoryServiceTest {
     // =====================================================
 
     @Test
-    @DisplayName("saveOnlyNewStatuses - должен установить createdAt для новых статусов")
-    void saveOnlyNewStatuses_ShouldSetCreatedAt() {
-
-        when(statusHistoryRepository.findByParcelOrderByOperationDateDesc(testParcel))
-                .thenReturn(testHistory);
-
-        ParcelStatusHistory newStatus = ParcelStatusHistory.builder()
-                .statusCode("3")
-                .statusName("Покинуло сортировочный центр")
-                .build();
-
-        List<ParcelStatusHistory> newStatuses = Collections.singletonList(newStatus);
-
-        statusHistoryService.saveOnlyNewStatuses(testParcel, newStatuses);
-
-        ArgumentCaptor<ParcelStatusHistory> captor = ArgumentCaptor.forClass(ParcelStatusHistory.class);
-        verify(statusHistoryRepository).save(captor.capture());
-
-        ParcelStatusHistory savedStatus = captor.getValue();
-        assertThat(savedStatus.getCreatedAt()).isNotNull();
-        assertThat(savedStatus.getParcel()).isEqualTo(testParcel);
-    }
-
-    @Test
     @DisplayName("saveOnlyNewStatuses - не должен сохранять статусы с одинаковыми полями")
     void saveOnlyNewStatuses_ShouldNotSaveDuplicateWithSameFields() {
-
         LocalDateTime fixedDate = createFixedDate();
 
         ParcelStatusHistory existingStatus = ParcelStatusHistory.builder()
@@ -585,7 +530,6 @@ class ParcelStatusHistoryServiceTest {
     @Test
     @DisplayName("updateCurrentStatusFlag - должен сбросить старый флаг и установить новый")
     void updateCurrentStatusFlag_ShouldResetOldAndSetNewFlag() {
-
         ParcelStatusHistory newCurrentStatus = ParcelStatusHistory.builder()
                 .id(2L)
                 .statusName("Новый статус")

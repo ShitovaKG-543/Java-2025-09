@@ -7,6 +7,8 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.otus.trackingbot.bot.TrackingBot;
+import ru.otus.trackingbot.bot.keyboard.KeyboardFactory;
+import ru.otus.trackingbot.service.*;
 
 /**
  * Конфигурация Telegram бота.
@@ -18,8 +20,55 @@ import ru.otus.trackingbot.bot.TrackingBot;
 @Configuration
 public class BotConfig {
 
-    @Value("${telegram.bot.token}")
-    private String botToken;
+    private final String botToken;
+    private final String botUsername;
+    private final UserService userService;
+    private final ParcelService parcelService;
+    private final UserParcelService userParcelService;
+    private final TrackingCacheService trackingCacheService;
+    private final TrackingServiceFactory trackingServiceFactory;
+    private final KeyboardFactory keyboardFactory;
+    private final BotInfoConfig botInfoConfig;
+
+    public BotConfig(
+            @Value("${telegram.bot.token}") String botToken,
+            @Value("${telegram.bot.username}") String botUsername,
+            UserService userService,
+            ParcelService parcelService,
+            UserParcelService userParcelService,
+            TrackingCacheService trackingCacheService,
+            TrackingServiceFactory trackingServiceFactory,
+            KeyboardFactory keyboardFactory,
+            BotInfoConfig botInfoConfig) {
+        this.botToken = botToken;
+        this.botUsername = botUsername;
+        this.userService = userService;
+        this.parcelService = parcelService;
+        this.userParcelService = userParcelService;
+        this.trackingCacheService = trackingCacheService;
+        this.trackingServiceFactory = trackingServiceFactory;
+        this.keyboardFactory = keyboardFactory;
+        this.botInfoConfig = botInfoConfig;
+    }
+
+    /**
+     * Создает экземпляр TrackingBot.
+     *
+     * @return настроенный экземпляр бота
+     */
+    @Bean
+    public TrackingBot trackingBot() {
+        return new TrackingBot(
+                botToken,
+                botUsername,
+                userService,
+                parcelService,
+                userParcelService,
+                trackingCacheService,
+                trackingServiceFactory,
+                keyboardFactory,
+                botInfoConfig);
+    }
 
     /**
      * Создает и регистрирует экземпляр TelegramBotsApi.
@@ -36,15 +85,5 @@ public class BotConfig {
         TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
         botsApi.registerBot(trackingBot);
         return botsApi;
-    }
-
-    /**
-     * Создает экземпляр TrackingBot.
-     *
-     * @return настроенный экземпляр бота
-     */
-    @Bean
-    public TrackingBot trackingBot() {
-        return new TrackingBot(botToken);
     }
 }

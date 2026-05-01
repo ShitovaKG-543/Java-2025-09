@@ -52,8 +52,8 @@ class MessageFormatterTest {
                 .notificationEnabled(true)
                 .build();
 
+        // Исправлено: у Parcel больше нет поля id
         testParcel = Parcel.builder()
-                .id(1L)
                 .trackingNumber(TRACKING_NUMBER)
                 .serviceName(SERVICE_NAME)
                 .description(DESCRIPTION)
@@ -110,7 +110,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен форматировать полную информацию о посылке со всеми заполненными полями")
     void shouldFormatCompleteParcelInfo() {
-
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, testStatusHistory);
 
         assertThat(result).contains("<b>📦 Полная информация о посылке</b>");
@@ -134,7 +133,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие опциональных полей")
     void shouldHandleMissingOptionalFields() {
-
         testParcel.setDescription(null);
         testParcel.setWeight(null);
         testParcel.setEstimatedDelivery(null);
@@ -155,7 +153,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать 'Статус неизвестен', когда lastStatus равен null или пустой строке")
     void shouldShowUnknownStatusWhenLastStatusIsNull() {
-
         testUserParcel.setLastStatus(null);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -166,7 +163,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать 'Статус неизвестен', когда lastStatus является пустой строкой")
     void shouldShowUnknownStatusWhenLastStatusIsEmpty() {
-
         testUserParcel.setLastStatus("");
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -177,7 +173,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать 'отслеживание остановлено', когда isActive равен false")
     void shouldShowTrackingStoppedWhenInactive() {
-
         testUserParcel.setIsActive(false);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -189,7 +184,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен включать эмодзи статуса для известных статусов")
     void shouldIncludeStatusEmojiForKnownStatuses() {
-
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
 
         assertThat(result).contains(StatusEmojiUtils.getEmoji(STATUS));
@@ -198,7 +192,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать null lastStatusHistory")
     void shouldHandleNullLastStatusHistory() {
-
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
 
         assertThat(result).doesNotContain("📍 Последняя операция в истории:");
@@ -209,7 +202,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно форматировать вес с двумя десятичными знаками")
     void shouldFormatWeightCorrectly() {
-
         testParcel.setWeight(new BigDecimal("1.5"));
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -220,7 +212,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Не должен показывать поле веса, когда вес равен null")
     void shouldNotShowWeightWhenNull() {
-
         testParcel.setWeight(null);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -231,7 +222,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Не должен показывать поле веса, когда вес равен нулю")
     void shouldNotShowWeightWhenZero() {
-
         testParcel.setWeight(BigDecimal.ZERO);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, null);
@@ -242,7 +232,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие места операции в истории статусов")
     void shouldHandleNullOperationPlace() {
-
         testStatusHistory.setOperationPlace(null);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, testStatusHistory);
@@ -255,7 +244,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие даты операции в истории статусов")
     void shouldHandleNullOperationDate() {
-
         testStatusHistory.setOperationDate(null);
 
         String result = MessageFormatter.formatParcelInfoFromDB(testUserParcel, testParcel, testStatusHistory);
@@ -267,7 +255,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен форматировать полную информацию об отслеживании со всеми полями")
     void shouldFormatCompleteTrackingInfo() {
-
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
 
         assertThat(result).startsWith(TITLE);
@@ -285,7 +272,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать сообщение о доставке, когда delivered равен true")
     void shouldShowDeliveredMessage() {
-
         testTrackingInfo.setDelivered(true);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -296,7 +282,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие описания статуса")
     void shouldHandleMissingStatusDescription() {
-
         testTrackingInfo.setStatusDescription(null);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -309,7 +294,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие веса")
     void shouldHandleMissingWeight() {
-
         testTrackingInfo.setWeight(null);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -320,7 +304,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать вес равный нулю")
     void shouldHandleWeightZero() {
-
         testTrackingInfo.setWeight(0.0);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -331,7 +314,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие последней операции")
     void shouldHandleMissingLastOperation() {
-
         testTrackingInfo.setLastOperation(null);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -343,7 +325,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие места в последней операции")
     void shouldHandleMissingOperationPlace() {
-
         testTrackingInfo.getLastOperation().setOperationPlace(null);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -355,7 +336,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие даты в последней операции")
     void shouldHandleMissingDateInLastOperation() {
-
         testTrackingInfo.getLastOperation().setDate(null);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -367,7 +347,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен форматировать вес с двумя десятичными знаками")
     void shouldFormatWeightWithTwoDecimalPlaces() {
-
         testTrackingInfo.setWeight(1.5);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -378,7 +357,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отрицательный вес - вес не отображается")
     void shouldHandleNegativeWeight() {
-
         testTrackingInfo.setWeight(-1.0);
 
         String result = MessageFormatter.formatTrackingInfo(testTrackingInfo, TITLE);
@@ -390,7 +368,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен форматировать полное уведомление об изменении статуса")
     void shouldFormatCompleteStatusChangeNotification() {
-
         String result = MessageFormatter.formatStatusChangeNotification(
                 testUserParcel, testTrackingInfo, OLD_STATUS, NEW_STATUS);
 
@@ -404,7 +381,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать 'неизвестно', когда oldStatus равен null")
     void shouldShowUnknownWhenOldStatusIsNull() {
-
         String result =
                 MessageFormatter.formatStatusChangeNotification(testUserParcel, testTrackingInfo, null, NEW_STATUS);
 
@@ -415,7 +391,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать отсутствие описания статуса в уведомлении")
     void shouldHandleMissingStatusDescriptionInNotification() {
-
         testTrackingInfo.setStatusDescription(null);
 
         String result = MessageFormatter.formatStatusChangeNotification(
@@ -430,7 +405,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен показывать поздравление с доставкой, когда delivered равен true")
     void shouldShowDeliveryCelebration() {
-
         testTrackingInfo.setDelivered(true);
 
         String result = MessageFormatter.formatStatusChangeNotification(
@@ -442,7 +416,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Не должен показывать поздравление с доставкой, когда посылка не доставлена")
     void shouldNotShowDeliveryCelebrationWhenNotDelivered() {
-
         testTrackingInfo.setDelivered(false);
 
         String result = MessageFormatter.formatStatusChangeNotification(
@@ -454,7 +427,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен корректно обрабатывать пустую строку старого статуса")
     void shouldHandleEmptyOldStatus() {
-
         String result =
                 MessageFormatter.formatStatusChangeNotification(testUserParcel, testTrackingInfo, "", NEW_STATUS);
 
@@ -466,7 +438,6 @@ class MessageFormatterTest {
     @Test
     @DisplayName("Должен иметь приватный конструктор")
     void shouldHavePrivateConstructor() throws Exception {
-
         Class<MessageFormatter> clazz = MessageFormatter.class;
 
         java.lang.reflect.Constructor<MessageFormatter> constructor = clazz.getDeclaredConstructor();

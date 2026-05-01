@@ -27,7 +27,6 @@ class ParcelServiceTest {
 
     private static final String TEST_TRACKING_NUMBER = "RA644000001RU";
     private static final String TEST_SERVICE_NAME = "Почта России";
-    private static final Long TEST_PARCEL_ID = 1L;
 
     @Mock
     private ParcelRepository parcelRepository;
@@ -47,13 +46,14 @@ class ParcelServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Исправлено: у Parcel больше нет поля id
         testParcel = Parcel.builder()
-                .id(TEST_PARCEL_ID)
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)
                 .createdAt(LocalDateTime.now())
                 .build();
 
+        // Остальная инициализация без изменений
         Operation operation1 = Operation.builder()
                 .operationId("1")
                 .operationName("Принято в отделении связи")
@@ -89,15 +89,17 @@ class ParcelServiceTest {
     // =====================================================
     // ТЕСТЫ ДЛЯ getOrCreateParcel
     // =====================================================
-
     @Test
     @DisplayName("getOrCreateParcel - существующая посылка должна быть возвращена")
     void getOrCreateParcel_ExistingParcel_ShouldReturnExisting() {
+        assertThat(testParcel).isNotNull();
 
+        // Мокаем findByTrackingNumber, а не findById!
         when(parcelRepository.findByTrackingNumber(TEST_TRACKING_NUMBER)).thenReturn(Optional.of(testParcel));
 
         Parcel result = parcelService.getOrCreateParcel(TEST_TRACKING_NUMBER, TEST_SERVICE_NAME);
 
+        assertThat(result).isNotNull();
         assertThat(result).isEqualTo(testParcel);
         assertThat(result.getTrackingNumber()).isEqualTo(TEST_TRACKING_NUMBER);
         verify(parcelRepository, never()).save(any(Parcel.class));
@@ -113,20 +115,23 @@ class ParcelServiceTest {
         Parcel result = parcelService.getOrCreateParcel(TEST_TRACKING_NUMBER, TEST_SERVICE_NAME);
 
         assertThat(result).isEqualTo(testParcel);
+        verify(parcelRepository).findByTrackingNumber(TEST_TRACKING_NUMBER);
         verify(parcelRepository).save(any(Parcel.class));
     }
 
     @Test
     @DisplayName("getOrCreateParcel - новая посылка должна иметь правильные поля")
     void getOrCreateParcel_NewParcel_ShouldHaveCorrectFields() {
-
         ArgumentCaptor<Parcel> parcelCaptor = ArgumentCaptor.forClass(Parcel.class);
+
         when(parcelRepository.findByTrackingNumber(TEST_TRACKING_NUMBER)).thenReturn(Optional.empty());
         when(parcelRepository.save(any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Parcel result = parcelService.getOrCreateParcel(TEST_TRACKING_NUMBER, TEST_SERVICE_NAME);
 
+        verify(parcelRepository).findByTrackingNumber(TEST_TRACKING_NUMBER);
         verify(parcelRepository).save(parcelCaptor.capture());
+
         Parcel savedParcel = parcelCaptor.getValue();
         assertThat(savedParcel.getTrackingNumber()).isEqualTo(TEST_TRACKING_NUMBER);
         assertThat(savedParcel.getServiceName()).isEqualTo(TEST_SERVICE_NAME);
@@ -139,7 +144,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - новый вес должен обновить посылку")
     void updateParcelStatus_NewWeight_ShouldUpdateParcel() {
-
         testParcel.setWeight(null);
         when(statusHistoryService.saveOnlyNewStatuses(any(Parcel.class), anyList()))
                 .thenReturn(0);
@@ -155,9 +159,8 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - вес не изменился не должен обновлять вес")
     void updateParcelStatus_SameWeight_ShouldNotUpdateWeight() {
-
         testParcel.setWeight(BigDecimal.valueOf(1.0));
-        testParcel.setDescription("Посылка в пути"); // Уже установлено описание
+        testParcel.setDescription("Посылка в пути");
         when(statusHistoryService.saveOnlyNewStatuses(any(Parcel.class), anyList()))
                 .thenReturn(0);
 
@@ -165,7 +168,6 @@ class ParcelServiceTest {
 
         assertThat(hasUpdates).isFalse();
         assertThat(testParcel.getWeight()).isEqualTo(BigDecimal.valueOf(1.0));
-        // save все равно вызывается из-за updateLastUpdated()
         verify(parcelRepository).save(testParcel);
         verify(trackingCacheService, never()).updateCache(anyString(), any(TrackingInfo.class));
     }
@@ -173,7 +175,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - новое описание должно обновить посылку")
     void updateParcelStatus_NewDescription_ShouldUpdateParcel() {
-
         testParcel.setDescription(null);
         testParcel.setWeight(BigDecimal.valueOf(1.0));
         when(statusHistoryService.saveOnlyNewStatuses(any(Parcel.class), anyList()))
@@ -190,7 +191,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - новые статусы должны быть сохранены")
     void updateParcelStatus_NewStatuses_ShouldSaveStatuses() {
-
         testParcel.setWeight(BigDecimal.valueOf(1.0));
         testParcel.setDescription("Посылка в пути");
         when(statusHistoryService.saveOnlyNewStatuses(eq(testParcel), anyList()))
@@ -206,7 +206,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - без изменений должно вернуть false")
     void updateParcelStatus_NoChanges_ShouldReturnFalse() {
-
         testParcel.setWeight(BigDecimal.valueOf(1.0));
         testParcel.setDescription("Посылка в пути");
         when(statusHistoryService.saveOnlyNewStatuses(any(Parcel.class), anyList()))
@@ -221,7 +220,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - null операции не должны вызывать сохранение истории")
     void updateParcelStatus_NullOperations_ShouldNotSaveHistory() {
-
         TrackingInfo infoWithoutOperations = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)
@@ -244,7 +242,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - пустой список операций не должен вызывать сохранение истории")
     void updateParcelStatus_EmptyOperations_ShouldNotSaveHistory() {
-
         TrackingInfo infoWithEmptyOperations = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)
@@ -267,7 +264,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - null вес не должен обновлять посылку")
     void updateParcelStatus_NullWeight_ShouldNotUpdateWeight() {
-
         TrackingInfo infoWithoutWeight = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)
@@ -292,7 +288,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - вес 0 не должен обновлять посылку")
     void updateParcelStatus_ZeroWeight_ShouldNotUpdateWeight() {
-
         TrackingInfo infoWithZeroWeight = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)
@@ -321,20 +316,18 @@ class ParcelServiceTest {
     @Test
     @DisplayName("findByTrackingNumber - существующая посылка должна быть найдена")
     void findByTrackingNumber_ExistingParcel_ShouldReturnParcel() {
-
         when(parcelRepository.findByTrackingNumber(TEST_TRACKING_NUMBER)).thenReturn(Optional.of(testParcel));
 
         Optional<Parcel> result = parcelService.findByTrackingNumber(TEST_TRACKING_NUMBER);
 
         assertThat(result).isPresent();
         assertThat(result.get()).isEqualTo(testParcel);
+        verify(parcelRepository).findByTrackingNumber(TEST_TRACKING_NUMBER);
     }
 
     @Test
     @DisplayName("findByTrackingNumber - несуществующая посылка должна вернуть пустой Optional")
     void findByTrackingNumber_NonExistingParcel_ShouldReturnEmpty() {
-
-        when(parcelRepository.findByTrackingNumber(TEST_TRACKING_NUMBER)).thenReturn(Optional.empty());
 
         Optional<Parcel> result = parcelService.findByTrackingNumber(TEST_TRACKING_NUMBER);
 
@@ -348,7 +341,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("getParcelHistory - должен вернуть историю статусов")
     void getParcelHistory_ShouldReturnHistory() {
-
         List<ParcelStatusHistory> history = new ArrayList<>();
         when(statusHistoryService.getHistoryByParcel(testParcel)).thenReturn(history);
 
@@ -365,7 +357,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("getLastParcelStatus - должен вернуть последний статус")
     void getLastParcelStatus_ShouldReturnLastStatus() {
-
         ParcelStatusHistory lastStatus =
                 ParcelStatusHistory.builder().id(1L).statusName("В пути").build();
         when(statusHistoryService.getLastStatus(testParcel)).thenReturn(lastStatus);
@@ -379,7 +370,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("getLastParcelStatus - без истории должен вернуть null")
     void getLastParcelStatus_NoHistory_ShouldReturnNull() {
-
         when(statusHistoryService.getLastStatus(testParcel)).thenReturn(null);
 
         ParcelStatusHistory result = parcelService.getLastParcelStatus(testParcel);
@@ -391,11 +381,9 @@ class ParcelServiceTest {
     // =====================================================
     // ТЕСТЫ ДЛЯ КОНВЕРТАЦИИ ОПЕРАЦИЙ
     // =====================================================
-
     @Test
     @DisplayName("convertOperationsToStatusHistory - должен корректно конвертировать операции")
     void convertOperationsToStatusHistory_ShouldConvertCorrectly() throws Exception {
-
         java.lang.reflect.Method method = ParcelService.class.getDeclaredMethod(
                 "convertOperationsToStatusHistory", Parcel.class, TrackingInfo.class);
         method.setAccessible(true);
@@ -413,12 +401,14 @@ class ParcelServiceTest {
         assertThat(firstStatus.getStatusDescription()).isEqualTo("Посылка в пути");
         assertThat(firstStatus.getOperationPlace()).isEqualTo("Москва");
         assertThat(firstStatus.getWeight()).isEqualTo(1000);
+        // isCurrent устанавливается позже в updateCurrentStatusFlag
         assertThat(firstStatus.getIsCurrent()).isFalse();
 
         ParcelStatusHistory secondStatus = result.get(1);
         assertThat(secondStatus.getStatusCode()).isEqualTo("2");
         assertThat(secondStatus.getStatusName()).isEqualTo("Прибыло в сортировочный центр");
-        assertThat(secondStatus.getIsCurrent()).isTrue(); // Последняя операция
+        // isCurrent устанавливается позже в updateCurrentStatusFlag
+        assertThat(secondStatus.getIsCurrent()).isFalse();
     }
 
     // =====================================================
@@ -428,7 +418,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - обновление веса с BigDecimal на Double")
     void updateParcelStatus_WeightConversion_ShouldWorkCorrectly() {
-
         testParcel.setWeight(BigDecimal.valueOf(0.5));
         testParcel.setDescription("Посылка в пути");
         TrackingInfo infoWithNewWeight = TrackingInfo.builder()
@@ -454,7 +443,6 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - множество изменений одновременно")
     void updateParcelStatus_MultipleUpdates_ShouldHandleAll() {
-
         testParcel.setWeight(BigDecimal.valueOf(0.5));
         testParcel.setDescription("Старое описание");
         when(statusHistoryService.saveOnlyNewStatuses(any(Parcel.class), anyList()))
@@ -472,10 +460,8 @@ class ParcelServiceTest {
     @Test
     @DisplayName("updateParcelStatus - только обновление lastUpdated без других изменений")
     void updateParcelStatus_OnlyLastUpdated_ShouldReturnFalse() {
-
         testParcel.setWeight(BigDecimal.valueOf(1.0));
         testParcel.setDescription("Посылка в пути");
-        // Создаем TrackingInfo без изменений веса и описания, и без новых статусов
         TrackingInfo sameInfo = TrackingInfo.builder()
                 .trackingNumber(TEST_TRACKING_NUMBER)
                 .serviceName(TEST_SERVICE_NAME)

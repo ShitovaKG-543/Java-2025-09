@@ -104,7 +104,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - с пустым списком должна содержать только кнопку назад")
     void getParcelsKeyboard_WithEmptyList_ShouldContainOnlyBackButton() {
-
         List<UserParcel> emptyList = new ArrayList<>();
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getParcelsKeyboard(emptyList);
@@ -122,7 +121,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - со списком посылок должна создавать кнопки для каждой посылки")
     void getParcelsKeyboard_WithParcelsList_ShouldCreateButtonsForEachParcel() {
-
         List<UserParcel> userParcels = createUserParcels(3);
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getParcelsKeyboard(userParcels);
@@ -152,7 +150,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - должна использовать customName если он задан")
     void getParcelsKeyboard_ShouldUseCustomNameWhenProvided() {
-
         List<UserParcel> userParcels = new ArrayList<>();
         UserParcel userParcel = createUserParcel(1L, "TRACK123", "Моя любимая посылка", true, "В пути");
         userParcels.add(userParcel);
@@ -168,7 +165,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - должна обрезать длинные названия (>30 символов)")
     void getParcelsKeyboard_ShouldTruncateLongNames() {
-
         List<UserParcel> userParcels = new ArrayList<>();
         String longName = "Очень-очень-очень-очень-очень длинное название посылки";
         UserParcel userParcel = createUserParcel(1L, "TRACK123", longName, true, "В пути");
@@ -178,6 +174,7 @@ class KeyboardFactoryTest {
 
         List<List<InlineKeyboardButton>> rows = keyboard.getKeyboard();
         String buttonText = rows.get(0).get(0).getText();
+        // Убираем префикс с эмодзи и индикатором для проверки длины
         String namePart = buttonText.substring(buttonText.lastIndexOf(" ") + 1);
         assertThat(namePart.length()).isLessThanOrEqualTo(30);
         assertThat(namePart).endsWith("...");
@@ -186,7 +183,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - должна использовать трек-номер если customName не задан")
     void getParcelsKeyboard_ShouldUseTrackingNumberWhenCustomNameNotSet() {
-
         List<UserParcel> userParcels = new ArrayList<>();
         UserParcel userParcel = createUserParcel(1L, "TRACK123456789", null, true, "В пути");
         userParcels.add(userParcel);
@@ -201,7 +197,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - для активной посылки должна показывать зеленый индикатор")
     void getParcelsKeyboard_ForActiveParcel_ShouldShowGreenIndicator() {
-
         List<UserParcel> userParcels = new ArrayList<>();
         UserParcel activeParcel = createUserParcel(1L, "TRACK123", null, true, "В пути");
         userParcels.add(activeParcel);
@@ -216,7 +211,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - для неактивной посылки должна показывать индикатор паузы")
     void getParcelsKeyboard_ForInactiveParcel_ShouldShowPauseIndicator() {
-
         List<UserParcel> userParcels = new ArrayList<>();
         UserParcel inactiveParcel = createUserParcel(1L, "TRACK123", null, false, "Остановлено");
         userParcels.add(inactiveParcel);
@@ -231,7 +225,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelsKeyboard - должна показывать правильное эмодзи для статуса посылки")
     void getParcelsKeyboard_ShouldShowCorrectStatusEmoji() {
-
         List<UserParcel> userParcels = new ArrayList<>();
 
         // Посылка со статусом "Вручено"
@@ -270,7 +263,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelActionsKeyboard - для активной посылки должна содержать кнопку 'Остановить отслеживание'")
     void getParcelActionsKeyboard_ForActiveParcel_ShouldHaveStopTrackingButton() {
-
         Long parcelId = 100L;
         boolean isActive = true;
 
@@ -289,7 +281,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelActionsKeyboard - для неактивной посылки должна содержать кнопку 'Возобновить отслеживание'")
     void getParcelActionsKeyboard_ForInactiveParcel_ShouldHaveResumeTrackingButton() {
-
         Long parcelId = 100L;
         boolean isActive = false;
 
@@ -308,7 +299,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getParcelActionsKeyboard - должна содержать все необходимые кнопки")
     void getParcelActionsKeyboard_ShouldContainAllRequiredButtons() {
-
         Long parcelId = 100L;
         boolean isActive = true;
 
@@ -345,7 +335,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getBackToParcelKeyboard - должна содержать кнопку 'Назад к действиям'")
     void getBackToParcelKeyboard_ShouldContainBackToActionsButton() {
-
         Long parcelId = 100L;
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getBackToParcelKeyboard(parcelId);
@@ -363,7 +352,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getBackFromHistoryKeyboard - должна содержать кнопки 'Обновить историю' и 'Назад к действиям'")
     void getBackFromHistoryKeyboard_ShouldContainRefreshAndBackButtons() {
-
         Long parcelId = 100L;
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getBackFromHistoryKeyboard(parcelId);
@@ -387,7 +375,6 @@ class KeyboardFactoryTest {
     @Test
     @DisplayName("getConfirmDeleteKeyboard - должна содержать кнопки 'Да, удалить' и 'Отмена'")
     void getConfirmDeleteKeyboard_ShouldContainConfirmAndCancelButtons() {
-
         Long parcelId = 100L;
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getConfirmDeleteKeyboard(parcelId);
@@ -413,7 +400,6 @@ class KeyboardFactoryTest {
     @DisplayName(
             "getNotificationsKeyboard - при включенных уведомлениях должна содержать кнопку 'Выключить уведомления'")
     void getNotificationsKeyboard_WhenEnabled_ShouldHaveDisableButton() {
-
         boolean enabled = true;
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getNotificationsKeyboard(enabled);
@@ -434,7 +420,6 @@ class KeyboardFactoryTest {
     @DisplayName(
             "getNotificationsKeyboard - при выключенных уведомлениях должна содержать кнопку 'Включить уведомления'")
     void getNotificationsKeyboard_WhenDisabled_ShouldHaveEnableButton() {
-
         boolean enabled = false;
 
         InlineKeyboardMarkup keyboard = keyboardFactory.getNotificationsKeyboard(enabled);
@@ -468,9 +453,9 @@ class KeyboardFactoryTest {
         User user =
                 User.builder().id(1L).chatId(123456789L).username("test_user").build();
 
+        // Исправлено: у Parcel больше нет поля id, только trackingNumber
         Parcel parcel = Parcel.builder()
-                .id(id)
-                .trackingNumber(trackingNumber)
+                .trackingNumber(trackingNumber) // ← trackingNumber как PK
                 .serviceName("Почта России")
                 .build();
 

@@ -17,6 +17,6 @@ CREATE TABLE IF NOT EXISTS users (
     last_notification_sent TIMESTAMP                    -- Время последней отправки массового уведомления
 );
 
--- Индексы для таблицы пользователей (ускоряют поиск)
-CREATE INDEX idx_users_chat_id ON users(chat_id);               -- Быстрый поиск по chat_id (основной способ поиска)
-CREATE INDEX idx_users_active ON users(is_active);              -- Поиск активных пользователей для массовых операций
+-- Индексы для таблицы пользователей
+CREATE INDEX idx_users_chat_id ON users(chat_id);
+CREATE INDEX idx_users_active ON users(is_active);

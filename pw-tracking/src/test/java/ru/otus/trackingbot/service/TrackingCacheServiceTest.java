@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ import ru.otus.trackingbot.model.TrackingInfo;
 import ru.otus.trackingbot.service.impl.RussianPostTrackingService;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TrackingCacheService тесты")
+@DisplayName("Модульные тесты TrackingCacheService")
 class TrackingCacheServiceTest {
 
     private static final String TRACKING_NUMBER = "TEST123456";
@@ -46,8 +47,8 @@ class TrackingCacheServiceTest {
         successTrackingInfo = TrackingInfo.builder()
                 .trackingNumber(TRACKING_NUMBER)
                 .serviceName("RussianPost")
-                .status("В пути")
-                .statusDescription("Посылка в пути")
+                .status("In transit")
+                .statusDescription("Parcel is in transit")
                 .success(true)
                 .delivered(false)
                 .lastCheck(LocalDateTime.now())
@@ -56,14 +57,13 @@ class TrackingCacheServiceTest {
         failedTrackingInfo = TrackingInfo.builder()
                 .trackingNumber(TRACKING_NUMBER)
                 .success(false)
-                .error("Не найден")
+                .error("Not found")
                 .build();
     }
 
     @Test
     @DisplayName("refreshCache - принудительно обновляет кеш")
     void refreshCache_forcesCacheRefresh() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(trackingService.trackParcel(TRACKING_NUMBER)).thenReturn(successTrackingInfo);
         doNothing().when(cache).put(eq(TRACKING_NUMBER), any(TrackingInfo.class));
@@ -79,7 +79,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("updateCache - успешно обновляет кеш")
     void updateCache_successfullyUpdatesCache() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         doNothing().when(cache).put(eq(TRACKING_NUMBER), any(TrackingInfo.class));
 
@@ -91,7 +90,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("updateCache - кеш не найден, ничего не делает")
     void updateCache_cacheNotFound_doesNothing() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(null);
 
         trackingCacheService.updateCache(TRACKING_NUMBER, successTrackingInfo);
@@ -102,7 +100,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("updateCache - информация об ошибке, не сохраняет в кеш")
     void updateCache_errorInfo_doesNotCache() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
 
         trackingCacheService.updateCache(TRACKING_NUMBER, failedTrackingInfo);
@@ -113,7 +110,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("getTrackingInfoWithFreshnessCheck - кеш свежий, возвращает из кеша")
     void getTrackingInfoWithFreshnessCheck_cacheFresh_returnsFromCache() {
-
         LocalDateTime recentTime = LocalDateTime.now().minusSeconds(30);
         successTrackingInfo.setLastCheck(recentTime);
 
@@ -131,7 +127,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("getTrackingInfoWithFreshnessCheck - кеш устарел, вызывает API")
     void getTrackingInfoWithFreshnessCheck_cacheStale_callsApi() {
-
         LocalDateTime oldTime = LocalDateTime.now().minusSeconds(120);
         successTrackingInfo.setLastCheck(oldTime);
 
@@ -151,7 +146,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("getTrackingInfoWithFreshnessCheck - кеш отсутствует, вызывает API")
     void getTrackingInfoWithFreshnessCheck_noCache_callsApi() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(cache.get(TRACKING_NUMBER)).thenReturn(null);
         when(trackingService.trackParcel(TRACKING_NUMBER)).thenReturn(successTrackingInfo);
@@ -165,9 +159,8 @@ class TrackingCacheServiceTest {
     }
 
     @Test
-    @DisplayName("getCacheAge - возвращает возраст кеша")
-    void getCacheAge_returnsCacheAge() {
-
+    @DisplayName("getCacheAge - возвращает Optional с возрастом кеша")
+    void getCacheAge_returnsOptionalWithCacheAge() {
         LocalDateTime checkTime = LocalDateTime.now().minusSeconds(45);
         successTrackingInfo.setLastCheck(checkTime);
 
@@ -175,28 +168,96 @@ class TrackingCacheServiceTest {
         when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
         when(valueWrapper.get()).thenReturn(successTrackingInfo);
 
-        Long age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
+        Optional<Long> age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
 
-        assertThat(age).isNotNull();
-        assertThat(age).isBetween(44L, 46L);
+        assertThat(age).isPresent();
+        assertThat(age.get()).isBetween(44L, 46L);
     }
 
     @Test
-    @DisplayName("getCacheAge - кеш отсутствует, возвращает null")
-    void getCacheAge_noCache_returnsNull() {
-
+    @DisplayName("getCacheAge - кеш отсутствует, возвращает пустой Optional")
+    void getCacheAge_noCache_returnsEmptyOptional() {
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(cache.get(TRACKING_NUMBER)).thenReturn(null);
 
-        Long age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
+        Optional<Long> age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
 
-        assertThat(age).isNull();
+        assertThat(age).isEmpty();
     }
 
     @Test
-    @DisplayName("isInCache - данные есть в кеше")
-    void isInCache_dataInCache_returnsTrue() {
+    @DisplayName("getCacheAge - кеш не найден, возвращает пустой Optional")
+    void getCacheAge_cacheNotFound_returnsEmptyOptional() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(null);
 
+        Optional<Long> age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
+
+        assertThat(age).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCacheAge - данные с null lastCheck, возвращает пустой Optional")
+    void getCacheAge_nullLastCheck_returnsEmptyOptional() {
+        successTrackingInfo.setLastCheck(null);
+
+        when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
+        when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
+        when(valueWrapper.get()).thenReturn(successTrackingInfo);
+
+        Optional<Long> age = trackingCacheService.getCacheAge(TRACKING_NUMBER);
+
+        assertThat(age).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCachedInfo - возвращает Optional с данными из кеша")
+    void getCachedInfo_returnsOptionalWithCachedData() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
+        when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
+        when(valueWrapper.get()).thenReturn(successTrackingInfo);
+
+        Optional<TrackingInfo> result = trackingCacheService.getCachedInfo(TRACKING_NUMBER);
+
+        assertThat(result).isPresent();
+        assertThat(result.get()).isEqualTo(successTrackingInfo);
+    }
+
+    @Test
+    @DisplayName("getCachedInfo - данных нет, возвращает пустой Optional")
+    void getCachedInfo_noData_returnsEmptyOptional() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
+        when(cache.get(TRACKING_NUMBER)).thenReturn(null);
+
+        Optional<TrackingInfo> result = trackingCacheService.getCachedInfo(TRACKING_NUMBER);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCachedInfo - кеш не найден, возвращает пустой Optional")
+    void getCachedInfo_cacheNotFound_returnsEmptyOptional() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(null);
+
+        Optional<TrackingInfo> result = trackingCacheService.getCachedInfo(TRACKING_NUMBER);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCachedInfo - данные некорректные, возвращает пустой Optional")
+    void getCachedInfo_invalidData_returnsEmptyOptional() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
+        when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
+        when(valueWrapper.get()).thenReturn(failedTrackingInfo);
+
+        Optional<TrackingInfo> result = trackingCacheService.getCachedInfo(TRACKING_NUMBER);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("isInCache - данные есть в кеше, возвращает true")
+    void isInCache_dataInCache_returnsTrue() {
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
         when(valueWrapper.get()).thenReturn(successTrackingInfo);
@@ -209,7 +270,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("isInCache - данных нет в кеше, возвращает false")
     void isInCache_noDataInCache_returnsFalse() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(cache.get(TRACKING_NUMBER)).thenReturn(null);
 
@@ -221,8 +281,19 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("isInCache - кеш не найден, возвращает false")
     void isInCache_cacheNotFound_returnsFalse() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(null);
+
+        boolean inCache = trackingCacheService.isInCache(TRACKING_NUMBER);
+
+        assertThat(inCache).isFalse();
+    }
+
+    @Test
+    @DisplayName("isInCache - данные некорректные, возвращает false")
+    void isInCache_invalidData_returnsFalse() {
+        when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
+        when(cache.get(TRACKING_NUMBER)).thenReturn(valueWrapper);
+        when(valueWrapper.get()).thenReturn(failedTrackingInfo);
 
         boolean inCache = trackingCacheService.isInCache(TRACKING_NUMBER);
 
@@ -232,7 +303,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("logCacheStats - логирует статистику (просто проверяет, что нет исключений)")
     void logCacheStats_logsStatsWithoutException() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(cache);
         when(cache.getName()).thenReturn("trackingInfo");
 
@@ -253,7 +323,6 @@ class TrackingCacheServiceTest {
     @Test
     @DisplayName("logCacheStats - кеш не найден, логирует warning")
     void logCacheStats_cacheNotFound_logsWarning() {
-
         when(cacheManager.getCache("trackingInfo")).thenReturn(null);
 
         trackingCacheService.logCacheStats();

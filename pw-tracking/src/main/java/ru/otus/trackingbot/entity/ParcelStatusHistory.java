@@ -8,13 +8,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Сущность, представляющая запись об изменении статуса посылки.
- * <p>
- * Хранит полную историю всех изменений статуса для каждой посылки.
- * Каждая запись содержит информацию об операции: дату, место, тип операции.
- * </p>
- */
 @Entity
 @Table(name = "parcel_status_history")
 @Data
@@ -28,64 +21,34 @@ public class ParcelStatusHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Посылка, к которой относится данная запись статуса.
-     * Связь Many-to-One с сущностью Parcel.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parcel_id", nullable = false)
+    @JoinColumn(name = "parcel_tracking_number", referencedColumnName = "tracking_number", nullable = false)
     private Parcel parcel;
 
-    /**
-     * Код статуса (внутренний идентификатор операции).
-     */
     private String statusCode;
 
-    /**
-     * Название статуса (человекочитаемое).
-     */
     private String statusName;
 
-    /**
-     * Подробное описание статуса.
-     */
     @Column(length = 1000)
     private String statusDescription;
 
-    /**
-     * Место совершения операции (город, отделение).
-     */
     private String operationPlace;
 
-    /**
-     * Дата и время совершения операции.
-     */
     private LocalDateTime operationDate;
 
-    /**
-     * Вес посылки на момент операции (в граммах).
-     */
     private Integer weight;
 
-    /**
-     * Дата и время создания записи в системе.
-     */
-    @Column(nullable = false)
+    // Без DEFAULT! Приложение должно явно установить
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /**
-     * Флаг, указывающий, является ли этот статус текущим для посылки.
-     * Только одна запись для посылки может иметь значение true.
-     */
-    private Boolean isCurrent = false;
+    // Без DEFAULT! Приложение должно явно установить
+    @Column(name = "is_current", nullable = false)
+    private Boolean isCurrent;
 
-    /**
-     * Инициализация полей перед сохранением.
-     * Устанавливает дату создания.
-     */
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        if (isCurrent == null) isCurrent = false;
+        // Приложение должно установить ВСЕ поля!
+        // Ничего не устанавливаем автоматически
     }
 }

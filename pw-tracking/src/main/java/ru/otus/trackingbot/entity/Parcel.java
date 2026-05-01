@@ -1,6 +1,7 @@
 package ru.otus.trackingbot.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
  * <p>
  * Хранит основную информацию о посылке, не зависящую от конкретного пользователя:
  * трек-номер, службу доставки, вес, описание и т.д.
+ * Использует tracking_number в качестве первичного ключа (натуральный ключ).
  * </p>
  *
  * <p>Связи:</p>
@@ -31,21 +33,18 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Parcel {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     /**
      * Уникальный трек-номер посылки.
-     * Не может быть null, уникален в системе.
+     * Используется как первичный ключ (натуральный ключ).
      */
-    @Column(nullable = false, unique = true, length = 50)
+    @Id
+    @Column(name = "tracking_number", nullable = false, length = 50)
     private String trackingNumber;
 
     /**
      * Название службы доставки (например, "Почта России").
      */
-    @Column(nullable = false, length = 50)
+    @Column(name = "service_name", nullable = false, length = 50)
     private String serviceName;
 
     /**
@@ -59,32 +58,36 @@ public class Parcel {
      * Используется BigDecimal для точного хранения десятичных значений.
      */
     @Column(precision = 10, scale = 2)
-    private java.math.BigDecimal weight;
+    private BigDecimal weight;
 
     /**
      * Ожидаемая дата доставки.
      */
+    @Column(name = "estimated_delivery")
     private LocalDate estimatedDelivery;
 
     /**
      * Дата и время создания записи в системе.
      */
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     /**
      * Дата и время последнего обновления информации.
      */
+    @Column(name = "last_updated")
     private LocalDateTime lastUpdated;
 
     /**
      * Последняя ошибка, возникшая при попытке получить информацию.
      */
+    @Column(name = "last_error")
     private String lastError;
 
     /**
      * Количество попыток получения информации после ошибки.
      */
+    @Column(name = "retry_count")
     private Integer retryCount;
 
     /**
@@ -124,7 +127,7 @@ public class Parcel {
      */
     public void setWeightFromDouble(Double weight) {
         if (weight != null) {
-            this.weight = java.math.BigDecimal.valueOf(weight);
+            this.weight = BigDecimal.valueOf(weight);
         }
     }
 

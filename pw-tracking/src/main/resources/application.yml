@@ -9,6 +9,8 @@ russianpost:
   tracking:
     login: ${RUSSIANPOST_LOGIN:}  # Логин для API (через переменную окружения)
     password: ${RUSSIANPOST_PASSWORD:}  # Пароль для API
+    api:
+      url: https://tracking.russianpost.ru/rtm34
 
 # Database Configuration - PostgreSQL
 spring:
@@ -38,11 +40,16 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=1h
+  task:
+    scheduling:
+      pool:
+        size: 5  # Размер пула потоков для scheduled задач
+      thread-name-prefix: tracking-scheduler-
 
 # Scheduler Configuration (гибкая настройка)
 scheduler:
   tracking:
-    enabled: true
+    enabled: false
     cron: "0 0 0 * * ?"
     # Альтернативные варианты:
     #  "0 * * * * ?"  - Каждую минуту (в 0 секунд)
@@ -54,6 +61,7 @@ scheduler:
     #  "0 0 * * * ?" - Каждый час
     #  "0 0 */2 * * ?" - Каждые 2 часа
     #  "0 0 0 * * ?"  # Раз в сутки в полночь
+    batch-size: 10
 
 # Cache Configuration
 cache:

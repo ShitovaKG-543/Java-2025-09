@@ -1,6 +1,7 @@
 package ru.otus.trackingbot.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,10 +63,6 @@ public class ParcelService {
 
     /**
      * Обновляет статус посылки, добавляя только новые операции из истории.
-     * <p>
-     * Обновляет основную информацию о посылке (вес, описание) и
-     * сохраняет только те статусы из истории, которых еще нет в базе.
-     * </p>
      *
      * @param parcel посылка для обновления
      * @param trackingInfo информация об отслеживании
@@ -108,7 +105,7 @@ public class ParcelService {
             }
         }
 
-        // ОБНОВЛЯЕМ КЕШ после сохранения в БД
+        // Обновляем кеш после сохранения в БД
         if (hasUpdates) {
             trackingCacheService.updateCache(parcel.getTrackingNumber(), trackingInfo);
             log.info("✅ Кеш обновлен для посылки {} после сохранения в БД", parcel.getTrackingNumber());
@@ -119,13 +116,10 @@ public class ParcelService {
 
     /**
      * Конвертирует операции из TrackingInfo в список ParcelStatusHistory.
-     *
-     * @param parcel посылка
-     * @param trackingInfo информация об отслеживании
-     * @return список объектов ParcelStatusHistory
      */
     private List<ParcelStatusHistory> convertOperationsToStatusHistory(Parcel parcel, TrackingInfo trackingInfo) {
         List<ParcelStatusHistory> statuses = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now(); // Одно время для всех операций
 
         for (Operation operation : trackingInfo.getAllOperations()) {
             ParcelStatusHistory statusHistory = ParcelStatusHistory.builder()
@@ -136,7 +130,8 @@ public class ParcelService {
                     .operationPlace(operation.getOperationPlace())
                     .operationDate(operation.getDate())
                     .weight(operation.getWeight())
-                    .isCurrent(operation.equals(trackingInfo.getLastOperation()))
+                    .isCurrent(false) // ← Явно!
+                    .createdAt(now) // ← Явно! Одно время для всех
                     .build();
             statuses.add(statusHistory);
         }

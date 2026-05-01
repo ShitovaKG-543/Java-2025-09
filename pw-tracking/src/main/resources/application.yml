@@ -1,0 +1,125 @@
+# Telegram Bot Configuration
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN:}  # Токен бота (можно через переменную окружения)
+    username: ${TELEGRAM_BOT_USERNAME:}  # Имя бота
+
+# Почта России API Tracking (SOAP)
+russianpost:
+  tracking:
+    login: ${RUSSIANPOST_LOGIN:}  # Логин для API (через переменную окружения)
+    password: ${RUSSIANPOST_PASSWORD:}  # Пароль для API
+    api:
+      url: https://tracking.russianpost.ru/rtm34
+
+# Database Configuration - PostgreSQL
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5430/trackingbott}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+    validate-on-migrate: true
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=1h
+  task:
+    scheduling:
+      pool:
+        size: 5  # Размер пула потоков для scheduled задач
+      thread-name-prefix: tracking-scheduler-
+
+# Scheduler Configuration (гибкая настройка)
+scheduler:
+  tracking:
+    enabled: false
+    cron: "0 0 0 * * ?"
+    # Альтернативные варианты:
+    #  "0 * * * * ?"  - Каждую минуту (в 0 секунд)
+    #  "*/30 * * * * ?" - Каждые 30 секунд
+    #  "0 0/1 * * * ?" - Каждую минуту
+    #  "0 0/5 * * * ?" - Каждые 5 минут
+    #  "0 0/10 * * * ?" - Каждые 10 минут
+    #  "0 0/30 * * * ?" - Каждые 30 минут
+    #  "0 0 * * * ?" - Каждый час
+    #  "0 0 */2 * * ?" - Каждые 2 часа
+    #  "0 0 0 * * ?"  # Раз в сутки в полночь
+    batch-size: 10
+
+# Cache Configuration
+cache:
+  tracking:
+    ttl: 3600  # Время жизни кеша в секундах (1 час)
+    max-size: 1000 # Максимальное количество записей в кеше
+
+# Scheduler Configuration
+#scheduler:
+#  tracking:
+#    fixed-delay: 3600000  # 1 hour in milliseconds
+#    initial-delay: 10000   # 10 seconds
+
+# Logging Configuration
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.tool.schema: DEBUG
+    org.flywaydb: DEBUG
+    ru.otus.trackingbot: DEBUG
+    org.telegram: INFO
+    org.springframework.web: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Server Configuration (for health checks)
+server:
+  port: 8080
+  shutdown: graceful
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# =====================================================
+# ИНФОРМАЦИЯ О БОТЕ
+# =====================================================
+bot:
+  info:
+    version: "1.0.0"
+    developer: "Ksenia Shitova"
+    copyright: "© 2026 Все права защищены"
+    website: "https://t.me/trackingbot"
+    support: "@support"
+
+  # Технологический стек (для отображения в /about)
+  technologies:
+    - "Java 21"
+    - "Spring Boot 3"
+    - "Telegram Bot API"
+    - "PostgreSQL"
+    - "SOAP API Почты России"
+    - "Caffeine Cache"
+    - "Lombok"

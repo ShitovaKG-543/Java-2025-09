@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: trackingbot-postgres
+    environment:
+      POSTGRES_DB: trackingbot
+      POSTGRES_USER: trackingbot_user
+      POSTGRES_PASSWORD: pwd
+    ports:
+      - "5430:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackingbot_user -d trackingbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tracking-bot:
+    build: .
+    container_name: tracking-bot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/trackingbot
+      - SPRING_DATASOURCE_USERNAME=trackingbot_user
+      - SPRING_DATASOURCE_PASSWORD=your_password
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - RUSSIANPOST_TRACKING_LOGIN=${RUSSIANPOST_TRACKING_LOGIN}
+      - RUSSIANPOST_TRACKING_PASSWORD=${RUSSIANPOST_TRACKING_PASSWORD}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
